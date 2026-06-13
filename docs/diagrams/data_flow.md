@@ -4,7 +4,7 @@
 flowchart LR
     subgraph Input["1. Data Ingestion"]
         CSV[CDR CSV Upload]
-        DS[Dataset Loaders<br/>IBM/Maven/Italia]
+        DS[Dataset Loaders<br/>IBM/Maven/SEBD]
     end
 
     subgraph Detect["2. Anomaly Detection"]

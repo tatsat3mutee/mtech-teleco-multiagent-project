@@ -7,7 +7,7 @@ sequenceDiagram
     participant INV as Investigator
     participant KB as Knowledge Base
     participant RES as Reasoner
-    participant LLM as LLM (Groq/Gemini)
+    participant LLM as LLM (Groq/OpenRouter)
     participant CRI as Critic
     participant REP as Reporter
 

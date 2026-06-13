@@ -14,7 +14,7 @@ graph TB
         RES[Reasoner<br/>Agent]
         CRI[Critic<br/>Agent]
         REP[Reporter<br/>Agent]
-        LLM[LiteLLM Router<br/>Groq → Gemini → DeepSeek → Kimi]
+        LLM[LiteLLM Router<br/>Groq → OpenRouter free models]
     end
 
     subgraph RAG["RAG Layer"]

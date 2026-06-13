@@ -4,9 +4,7 @@
 graph TB
     subgraph Internet["External Services"]
         GROQ[Groq API]
-        GEMINI[Gemini API]
-        DEEP[DeepSeek API]
-        KIMI[Kimi API]
+        OPENR[OpenRouter API<br/>free DeepSeek/Llama models]
         LFSAAS[Langfuse SaaS]
         GH[GitHub<br/>CI/CD]
     end
@@ -42,9 +40,7 @@ graph TB
     MLS --> MV
 
     APP --> GROQ
-    APP --> GEMINI
-    APP --> DEEP
-    APP --> KIMI
+    APP --> OPENR
     APP --> LFSAAS
     APP --> MLS
 
