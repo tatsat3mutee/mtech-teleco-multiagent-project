@@ -2,12 +2,12 @@
 
 ```mermaid
 flowchart LR
-    A[Billing Transaction Stream<br/>millions per day] --> B{Automated<br/>Anomaly Detection}
-    B -->|flagged in < 5 min| C[Anomaly Queue]
+    A[Billing Transaction Stream<br/>hundreds of millions per day] --> B{Automated<br/>Anomaly Detection}
+    B -->|fast & mature: flagged in < 5 min| C[Anomaly Queue]
     C --> D[Manual Root-Cause Analysis<br/>by billing engineer]
-    D --> E[Resolution<br/>re-rate / refund / credit]
+    E2[Resolution<br/>re-rate / refund / credit]
+    D --> E2
 
-    B -.->|fast, mature| C
     C ==>|SLOW MANUAL GAP<br/>65 to 120 min per case| D
 
     style B fill:#d4edda,stroke:#28a745

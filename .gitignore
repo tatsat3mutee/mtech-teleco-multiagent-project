@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# Virtual env
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Data (regenerable)
+data/raw/
+data/processed/
+data/graph_rag/
+
+# Build artifacts
+chroma_db/
+mlruns/
+results/ablation/
+models/*.joblib
+inferences.db
+*.log
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Report / submission binaries (kept out of the code repo)
+*.pdf
+*.docx
+~$*            # Word lock/temp files
+*.backup.docx
+*.prefig.docx
+*.prepage.docx
+
+# OS
+Thumbs.db

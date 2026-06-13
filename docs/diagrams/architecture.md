@@ -27,9 +27,8 @@ graph TB
     end
 
     subgraph Detection["Detection Layer"]
-        IF[IsolationForest]
         RB[Rule-Based<br/>Pre-filter]
-        STAT[Statistical<br/>Z-Score]
+        IF[IsolationForest]
     end
 
     subgraph Data["Data Layer"]
@@ -46,22 +45,28 @@ graph TB
     Agents --> MLF
     Agents --> LF
 
+    %% Agent pipeline (LangGraph state-graph flow)
+    INV -->|hypotheses| RES
+    RES -->|draft RCA| CRI
+    CRI -->|proceed| REP
+    CRI -.->|revise| RES
+
+    %% Agent resource usage
     INV --> HYB
     INV --> GR
     RES --> LLM
     CRI --> LLM
     REP --> LLM
-    CRI -.->|revision| RES
 
     HYB --> CDB
     HYB --> BM
+    GR --> CDB
     EMB --> CDB
     CHK --> EMB
+    CHK --> GR
 
-    Detection --> Agents
-    IF --> Detection
-    RB --> Detection
-    STAT --> Detection
+    RB --> IF
+    IF --> INV
 
     Data --> Detection
     IBM --> INJ
