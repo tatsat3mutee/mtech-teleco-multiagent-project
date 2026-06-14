@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_047",
+  "anomaly_id": "CF-011",
+  "anomaly_type": "cdr_failure",
+  "affected_pattern": "billing records dropped during weekly archival window with NULL TotalCharges in the active DB",
+  "root_cause": "Archival job deleted before billing \u2014 the archival job truncated the billing record staging table before the weekly billing job had read it, so both the active and billing databases ended up with NULLs for the same period.",
+  "supporting_evidence": [
+    "Billing Record Failure RCA Playbook: Archival-Before-Billing Ordering Defect pattern",
+    "Cron ordering shows archival scheduled 15 minutes before billing",
+    "Audit log shows TRUNCATE on staging prior to billing SELECT"
+  ],
+  "recommended_action": [
+    "Reorder jobs so billing runs before archival, enforced by DAG",
+    "Recover billing records from archival storage and replay billing",
+    "Replace TRUNCATE with soft-delete + retention policy",
+    "Add integration test: billing job sees staging non-empty after trigger"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

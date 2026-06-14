@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_034",
+  "anomaly_id": "US-010",
+  "anomaly_type": "usage_spike",
+  "affected_pattern": "Small cohort of customers on metered tethering show 10x usage with no change in primary-device usage",
+  "root_cause": "Tethering cap bypass defect \u2014 a UE OS update allowed tethered traffic to be tagged as primary-device traffic in the APN header, bypassing the tethering-metered rate that applied the cap.",
+  "supporting_evidence": [
+    "Usage Spike RCA Playbook: Tethering-Tag Bypass pattern",
+    "Device OS version common across affected customers",
+    "Deep-packet inspection confirms tethered flows lacking the tethering-tag"
+  ],
+  "recommended_action": [
+    "Deploy PGW rule to reclassify flows by TTL/user-agent heuristics",
+    "Issue partial credit for mis-classified overage",
+    "Engage device OEM regarding the OS behavior change",
+    "Add metric: tethering-tag presence per APN; alert on drop"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

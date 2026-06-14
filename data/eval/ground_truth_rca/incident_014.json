@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_014",
+  "anomaly_id": "DC-002",
+  "anomaly_type": "duplicate_charge",
+  "affected_pattern": "Customer shows doubled MonthlyCharges with two billing entries separated by seconds",
+  "root_cause": "Billing system retry logic error \u2014 the retry mechanism for a failed transaction duplicated the charge when the original transaction actually succeeded but confirmation was lost.",
+  "supporting_evidence": [
+    "Duplicate Charge RCA Playbook: Billing System Retry Logic Error pattern",
+    "Two charge entries with same amount but different transaction IDs",
+    "System timeout event logged between the two transactions"
+  ],
+  "recommended_action": [
+    "Implement transaction-level idempotency checks",
+    "Reverse the duplicate charge",
+    "Add unique transaction ID verification before charge posting",
+    "Audit retry logic configuration"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

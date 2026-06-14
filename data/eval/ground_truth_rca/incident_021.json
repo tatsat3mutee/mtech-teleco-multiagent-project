@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_021",
+  "anomaly_id": "DC-009",
+  "anomaly_type": "duplicate_charge",
+  "affected_pattern": "Dual-homed billing record collection produced duplicate records in Africa-region accounts",
+  "root_cause": "Dual-homed billing record forwarding \u2014 both primary and standby mediation paths were active simultaneously after a regional network change, and the billing record router forwarded to both, doubling the events delivered to rating.",
+  "supporting_evidence": [
+    "Duplicate Charge RCA Playbook: Dual-Homed Mediation pattern",
+    "Network change NC-8172 set primary=active AND standby=active on billing record router",
+    "Rating input topic message count exactly 2x the network element emission count"
+  ],
+  "recommended_action": [
+    "Reset billing record router to active/standby mode (one active path only)",
+    "Deduplicate rating input for the overlap window by (IMSI, timestamp, cdr_id)",
+    "Reverse duplicated charges on affected customer invoices",
+    "Add a continuous check on billing record source-to-rating count ratio; alert if > 1.05"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

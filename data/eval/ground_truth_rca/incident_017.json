@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_017",
+  "anomaly_id": "DC-005",
+  "anomaly_type": "duplicate_charge",
+  "affected_pattern": "Charges double only for accounts whose region failed over to the DR site last night",
+  "root_cause": "DR failback replay \u2014 the primary site came back online without a 'charges-already-posted' reconciliation, and the primary replayed the DR-processed queue, creating duplicates.",
+  "supporting_evidence": [
+    "Duplicate Charge RCA Playbook: DR Failback Replay pattern",
+    "Failover timestamp aligns with start of duplicate window",
+    "No reconciliation job recorded in the runbook execution log for failback"
+  ],
+  "recommended_action": [
+    "Reverse duplicates identified by (account_id, cdr_hash) present on both sites",
+    "Add mandatory reconciliation step to the failback runbook",
+    "Persist a global 'posted-set' in the shared cache referenced by both sites",
+    "Tabletop exercise for DR cutover covering idempotency"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_055",
+  "anomaly_id": "SB-007",
+  "anomaly_type": "sla_breach",
+  "affected_pattern": "Customers on commitment-discount plans are billed undiscounted after reaching commitment tier",
+  "root_cause": "Tiered commitment discount not stepped \u2014 the discount-stepping function rounded tier thresholds incorrectly so customers who exactly hit the tier were placed in the next-lower discount bucket, resulting in overcharges.",
+  "supporting_evidence": [
+    "SLA Breach RCA Playbook: Tier Threshold Rounding pattern",
+    "Pricing function uses floor() where ceil() was intended",
+    "Affected accounts sit exactly at tier boundary usage"
+  ],
+  "recommended_action": [
+    "Patch the discount-stepping function to use ceil() at boundaries",
+    "Rerate affected customers and refund the differential",
+    "Add property-based test over the entire tier boundary set",
+    "Publish internal advisory on tier-boundary rounding to Pricing and Finance"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

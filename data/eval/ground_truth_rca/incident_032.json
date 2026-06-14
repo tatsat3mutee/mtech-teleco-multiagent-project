@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_032",
+  "anomaly_id": "US-008",
+  "anomaly_type": "usage_spike",
+  "affected_pattern": "Volumetric spike isolated to uplink while downlink stays flat",
+  "root_cause": "DDoS amplification exposure \u2014 the customer's IoT gateway was exploited as a reflector in a DNS amplification attack, sending large uplink packets in response to small queries.",
+  "supporting_evidence": [
+    "Usage Spike RCA Playbook: Amplification-Reflection Exploit pattern",
+    "Uplink-to-downlink ratio inverted from historical norm",
+    "Threat intel feed flagged the destination IP as an amplification target"
+  ],
+  "recommended_action": [
+    "Block amplification-source ports at the PGW/UPF for the affected APN",
+    "Credit the fraudulent uplink traffic",
+    "Advise the customer to patch the gateway firmware",
+    "Add an uplink-skew anomaly detector to the security pipeline"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

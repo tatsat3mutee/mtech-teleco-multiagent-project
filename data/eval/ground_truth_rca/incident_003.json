@@ -1,0 +1,19 @@
+{
+  "incident_id": "incident_003",
+  "anomaly_id": "ZB-003",
+  "anomaly_type": "zero_billing",
+  "affected_pattern": "Multiple customers on same tariff plan showing zero charges in same billing cycle",
+  "root_cause": "Rating engine configuration error \u2014 incorrect tariff plan configuration rating service usage at $0 for the specific plan variant.",
+  "supporting_evidence": [
+    "Zero-Billing RCA Playbook: Rating Engine Configuration Error pattern",
+    "Multiple customers on same plan affected simultaneously",
+    "Recent configuration change to tariff plan identified in change log"
+  ],
+  "recommended_action": [
+    "Correct tariff configuration in rating engine",
+    "Reprocess all affected billing records for the billing cycle",
+    "Implement configuration change validation checks"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

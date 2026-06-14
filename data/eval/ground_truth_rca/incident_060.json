@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_060",
+  "anomaly_id": "SB-012",
+  "anomaly_type": "sla_breach",
+  "affected_pattern": "Enterprise customer sees charges that exceed the regulated Universal Service Fund cap",
+  "root_cause": "USF cap calculated against pre-discount total instead of post-discount total \u2014 a change in tax-engine ordering placed USF before the commitment discount, inflating the regulated cap base.",
+  "supporting_evidence": [
+    "SLA Breach RCA Playbook: Tax/Discount Ordering Drift pattern",
+    "Tax-engine ordering rule changed in release TAX-2026.02",
+    "USF cap formula expects post-discount base per regulator guidance"
+  ],
+  "recommended_action": [
+    "Restore USF calculation order: discounts first, then USF, then tax",
+    "Rerate and refund the over-applied USF",
+    "Document ordering invariants with formal test coverage",
+    "Notify regulator of correction if required by jurisdiction"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

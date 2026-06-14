@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_049",
+  "anomaly_id": "SB-001",
+  "anomaly_type": "sla_breach",
+  "affected_pattern": "Enterprise customer monthly charges exceed contract cap by 50-200%",
+  "root_cause": "Contract threshold not applied in rating engine \u2014 the customer's billing cap was not properly configured, allowing charges to exceed the contractual maximum.",
+  "supporting_evidence": [
+    "SLA Breach RCA Playbook: Contract Threshold Not Applied pattern",
+    "CRM shows billing cap of $500/month but current charge is $1200",
+    "Rating engine configuration audit shows missing cap rule for this account"
+  ],
+  "recommended_action": [
+    "Correct rating engine configuration with proper billing cap",
+    "Reprocess bills from the date cap should have been applied",
+    "Issue refund for all overcharges above contract cap",
+    "Calculate and apply SLA penalty credits per contract terms"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

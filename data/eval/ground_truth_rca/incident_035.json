@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_035",
+  "anomaly_id": "US-011",
+  "anomaly_type": "usage_spike",
+  "affected_pattern": "Dormant accounts suddenly appearing with 10x usage in a distant country",
+  "root_cause": "Account takeover via SIM swap \u2014 adversary performed SIM swap through a social-engineered CSR and immediately initiated high-value international calling and data.",
+  "supporting_evidence": [
+    "Usage Spike RCA Playbook: SIM Swap Account Takeover pattern",
+    "CSR audit trail shows SIM swap minutes before first fraudulent billing record",
+    "Destination numbers match known high-risk international ranges"
+  ],
+  "recommended_action": [
+    "Immediate suspension and fraud investigation for affected accounts",
+    "Reverse all fraudulent charges per operator fraud policy",
+    "Require callback + 2FA for any future SIM swap",
+    "Retrain CSR staff on social-engineering red flags"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

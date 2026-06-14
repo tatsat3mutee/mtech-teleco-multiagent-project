@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_006",
+  "anomaly_id": "ZB-006",
+  "anomaly_type": "zero_billing",
+  "affected_pattern": "International-roaming-heavy customers show $0 international charges despite active roaming usage in billing records",
+  "root_cause": "Roaming partner rate-sheet not loaded for the current month \u2014 the inter-operator tariff file from the visited PLMN failed its signature-verification step and the rating engine silently fell back to a $0 rate for unrecognized operators.",
+  "supporting_evidence": [
+    "Zero-Billing RCA Playbook: Missing Roaming Rate Sheet pattern",
+    "Rating engine warning log: 'partner-tariff-not-found, defaulting to 0.0'",
+    "TAP 3.12 rate file ingestion job failed silently for partner MCC 262"
+  ],
+  "recommended_action": [
+    "Reload and verify roaming rate sheet for MCC 262",
+    "Rerate all roaming billing records in the affected period",
+    "Fix rating engine to fail-closed (reject rather than $0) on missing partner rates",
+    "Add alerting when TAP file ingestion exits with non-zero status"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

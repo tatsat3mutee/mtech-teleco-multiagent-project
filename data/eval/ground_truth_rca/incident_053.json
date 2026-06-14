@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_053",
+  "anomaly_id": "SB-005",
+  "anomaly_type": "sla_breach",
+  "affected_pattern": "Customer first-bill after contract renewal shows charges at legacy rate card",
+  "root_cause": "Contract renewal not published to rating \u2014 the renewed contract was approved in CRM but the 'publish-to-rating' webhook failed silently, leaving rating on the legacy (higher) rate card.",
+  "supporting_evidence": [
+    "SLA Breach RCA Playbook: Contract Publish Webhook Failure pattern",
+    "CRM shows contract version v4 but rating engine is still on v3",
+    "Webhook dead-letter queue has entries for the affected account"
+  ],
+  "recommended_action": [
+    "Replay the webhook to publish contract v4",
+    "Rerate and refund the excess to the new contract floor",
+    "Add an alert on non-zero webhook DLQ",
+    "Introduce a rating-vs-CRM version drift dashboard"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

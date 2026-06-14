@@ -1,0 +1,19 @@
+{
+  "incident_id": "incident_001",
+  "anomaly_id": "ZB-001",
+  "anomaly_type": "zero_billing",
+  "affected_pattern": "Active customer with InternetService=Fiber, MonthlyCharges suddenly 0",
+  "root_cause": "Billing system failed to process billing record for current cycle. Likely cause: billing record ingestion pipeline timeout during batch processing window, resulting in zero-rated billing record.",
+  "supporting_evidence": [
+    "IBM Telco Billing Operations Standards Section 5.2 (billing accuracy) \u2014 billing record processing timeout handling",
+    "SLA Document \u2014 Section 3.1: Billing accuracy guarantee >= 99.5%",
+    "Zero-Billing RCA Playbook: billing record Ingestion Pipeline Timeout pattern"
+  ],
+  "recommended_action": [
+    "Trigger billing record reprocessing for affected account",
+    "Verify billing pipeline health for batch window",
+    "Issue corrective billing statement"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

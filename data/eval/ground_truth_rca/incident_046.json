@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_046",
+  "anomaly_id": "CF-010",
+  "anomaly_type": "cdr_failure",
+  "affected_pattern": "Missing TotalCharges for prepaid subscribers only; postpaid unaffected",
+  "root_cause": "OCS (Online Charging System) unavailability \u2014 the prepaid real-time charging system was in maintenance mode, causing prepaid billing records to be diverted to a quarantine queue that downstream invoicing never read.",
+  "supporting_evidence": [
+    "Billing Record Failure RCA Playbook: OCS Maintenance Quarantine Backlog pattern",
+    "OCS maintenance window aligns with the failure interval",
+    "Quarantine queue depth spiked and remained elevated"
+  ],
+  "recommended_action": [
+    "Replay quarantined prepaid billing records through OCS post-maintenance",
+    "Rate and bill the replayed events with appropriate adjustment",
+    "Add quarantine-queue depth alerting with SLO",
+    "Automate the post-maintenance quarantine drain"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

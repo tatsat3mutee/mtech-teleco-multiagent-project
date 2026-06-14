@@ -1,0 +1,1203 @@
+[
+  {
+    "anomaly_id": "ZB-001",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Active customer with InternetService=Fiber, MonthlyCharges suddenly 0",
+    "root_cause": "Billing system failed to process CDR for current cycle. Likely cause: CDR ingestion pipeline timeout during batch processing window, resulting in zero-rated billing record.",
+    "supporting_evidence": [
+      "3GPP TS 32.240 Section 5.2 — CDR processing timeout handling",
+      "SLA Document — Section 3.1: Billing accuracy guarantee >= 99.5%",
+      "Zero-Billing RCA Playbook: CDR Ingestion Pipeline Timeout pattern"
+    ],
+    "recommended_action": [
+      "Trigger CDR reprocessing for affected account",
+      "Verify CDR pipeline health for batch window",
+      "Issue corrective billing statement"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "MonthlyCharges x affected_accounts",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "ZB-002",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Customer with active PhoneService and multiple streaming services showing $0 monthly charge",
+    "root_cause": "Provisioning system mismatch — customer was provisioned for services but billing system not updated. Service activation event did not propagate to billing platform.",
+    "supporting_evidence": [
+      "Provisioning-to-billing sync protocol documentation",
+      "Zero-Billing RCA Playbook: Provisioning System Mismatch pattern",
+      "CRM shows active services but billing system shows inactive"
+    ],
+    "recommended_action": [
+      "Resync provisioning system with billing platform",
+      "Issue corrective bill for missed billing cycles",
+      "Audit provisioning event queue for other stuck messages"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "MonthlyCharges x missed_cycles",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "ZB-003",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Multiple customers on same tariff plan showing zero charges in same billing cycle",
+    "root_cause": "Rating engine configuration error — incorrect tariff plan configuration rating service usage at $0 for the specific plan variant.",
+    "supporting_evidence": [
+      "Zero-Billing RCA Playbook: Rating Engine Configuration Error pattern",
+      "Multiple customers on same plan affected simultaneously",
+      "Recent configuration change to tariff plan identified in change log"
+    ],
+    "recommended_action": [
+      "Correct tariff configuration in rating engine",
+      "Reprocess all affected CDRs for the billing cycle",
+      "Implement configuration change validation checks"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Sum of expected charges for all affected customers",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "ZB-004",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Postpaid customers converted from prepaid in the last 30 days showing $0 MonthlyCharges",
+    "root_cause": "Prepaid-to-postpaid conversion workflow failure — subscriber profile was migrated in the CRM but the recurring charge schedule was never activated in the billing catalog, leaving the account in a zero-recurring state.",
+    "supporting_evidence": [
+      "Zero-Billing RCA Playbook: Plan Conversion Workflow Gap pattern",
+      "Conversion timestamp in CRM precedes absence of recurring charge record in billing DB",
+      "Ops change ticket CHG-48213 for conversion workflow deployed 32 days ago"
+    ],
+    "recommended_action": [
+      "Re-trigger recurring charge activation for all conversions in the last 30 days",
+      "Back-bill customers from their conversion date per regulatory grace window",
+      "Add post-conversion validation step to the workflow DAG",
+      "File customer notification before back-billing to comply with consumer protection rules"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Cumulative missed recurring charges x affected conversions",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "ZB-005",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Accounts with recently expired promotional bundles showing $0 on the bill after bundle end",
+    "root_cause": "Promotion expiry handler did not re-activate the base tariff — the offer-management microservice marked the promotion inactive but failed to publish a 'restore-base-tariff' event, leaving the billing catalog without any active rate plan.",
+    "supporting_evidence": [
+      "Zero-Billing RCA Playbook: Promotion Expiry Handler Defect pattern",
+      "Kafka topic offer-events has 'promotion.ended' without matching 'tariff.restored' events",
+      "Offer-management service release 2026.03.11 changed event emission order"
+    ],
+    "recommended_action": [
+      "Publish retroactive 'tariff.restored' events for all affected accounts",
+      "Reprocess the current billing cycle to apply base tariff charges",
+      "Hotfix offer-management service to emit both events atomically",
+      "Add a reconciliation job comparing offer-ended vs tariff-restored counts daily"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Base-tariff amount x affected accounts x cycles",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "ZB-006",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "International-roaming-heavy customers show $0 international charges despite active roaming usage in CDRs",
+    "root_cause": "Roaming partner rate-sheet not loaded for the current month — the inter-operator tariff file from the visited PLMN failed its signature-verification step and the rating engine silently fell back to a $0 rate for unrecognized operators.",
+    "supporting_evidence": [
+      "Zero-Billing RCA Playbook: Missing Roaming Rate Sheet pattern",
+      "Rating engine warning log: 'partner-tariff-not-found, defaulting to 0.0'",
+      "TAP 3.12 rate file ingestion job failed silently for partner MCC 262"
+    ],
+    "recommended_action": [
+      "Reload and verify roaming rate sheet for MCC 262",
+      "Rerate all roaming CDRs in the affected period",
+      "Fix rating engine to fail-closed (reject rather than $0) on missing partner rates",
+      "Add alerting when TAP file ingestion exits with non-zero status"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Unbilled international roaming revenue",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "ZB-007",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Enterprise accounts under consolidated billing show $0 for one of several child accounts",
+    "root_cause": "Hierarchy-resolver bug in consolidated billing — a parent account's charge-aggregation query skipped child accounts whose ledger had been touched by a pending credit note, leaving those children at $0 on the consolidated invoice.",
+    "supporting_evidence": [
+      "Zero-Billing RCA Playbook: Consolidated Billing Hierarchy Defect pattern",
+      "All affected child accounts have an open credit_note row with status=pending",
+      "SQL in consolidated-invoice job filters out rows where credit_note_pending IS NOT NULL"
+    ],
+    "recommended_action": [
+      "Regenerate consolidated invoices including the skipped children",
+      "Issue supplementary invoice for the missed charges",
+      "Fix the aggregation SQL to include pending credit notes as separate line items",
+      "Add a regression test covering parent-child with pending credits"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Unbilled child-account charges",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "ZB-008",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Recently activated accounts all show $0 for their first full billing cycle",
+    "root_cause": "First-bill proration defect — a flag meant to zero the pro-rata partial cycle was incorrectly applied to the first full cycle as well, leading to $0 bills for newly onboarded accounts.",
+    "supporting_evidence": [
+      "Zero-Billing RCA Playbook: First-Bill Proration Flag Misapplied pattern",
+      "Proration-flag code path introduced in release billing-engine 4.7",
+      "All affected customers have activation_date within last 35 days"
+    ],
+    "recommended_action": [
+      "Recompute first full cycle charges for all newly onboarded accounts",
+      "Issue corrective invoice with clear customer communication",
+      "Patch billing-engine to apply proration flag only to partial-cycle charges",
+      "Add unit test covering partial vs full-cycle proration branches"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "First-month revenue x affected new customers",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "ZB-009",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Accounts whose tenure just crossed a loyalty-tier threshold show zero recurring charges",
+    "root_cause": "Loyalty-tier discount misconfiguration — a newly introduced 'platinum' tier discount was configured as 100% (intended 10%), applying a full waiver instead of a partial credit to all customers who just qualified.",
+    "supporting_evidence": [
+      "Zero-Billing RCA Playbook: Discount Config Off-By-Factor pattern",
+      "Discount row loyalty_tier=platinum has value=1.00 in the pricing table",
+      "Change ticket CHG-51204 deployed the tier two weeks ago"
+    ],
+    "recommended_action": [
+      "Correct the discount value from 1.00 to 0.10 in the pricing table",
+      "Rerate affected cycles and issue differential invoices",
+      "Add a schema constraint CHECK (discount_value BETWEEN 0 AND 0.99)",
+      "Require two-person review for pricing-table changes going forward"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "90% of recurring revenue for affected platinum-tier customers",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "ZB-010",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "All customers invoiced between 02:00 and 03:00 UTC on DST spring-forward day show $0",
+    "root_cause": "Daylight-saving-time transition defect — the billing engine's cycle-window query used local time without DST awareness, producing a zero-duration window during the skipped hour and generating empty invoices.",
+    "supporting_evidence": [
+      "Zero-Billing RCA Playbook: DST Transition Empty Window pattern",
+      "Invoicing job logs show cycle_window_seconds=0 for the affected batch",
+      "Known issue with jdbc driver timezone handling (US/Eastern)"
+    ],
+    "recommended_action": [
+      "Rerun invoicing job for the affected hour using UTC-normalized windows",
+      "Void the empty invoices and reissue correct ones",
+      "Migrate all billing windows to UTC with explicit timezone conversion at presentation",
+      "Add a regression test exercising spring-forward and fall-back days"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Single-hour cohort revenue, small but reputationally visible",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "ZB-011",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Specific customer segment (family plan primary lines) shows $0 while secondary lines are billed normally",
+    "root_cause": "Family-plan splitter attributed the full plan charge to secondary lines and nothing to the primary — a recent refactor inverted the primary/secondary flag when computing the per-line allocation.",
+    "supporting_evidence": [
+      "Zero-Billing RCA Playbook: Multi-Line Allocation Inversion pattern",
+      "Secondary lines show duplicated full charges (matching Duplicate-Charge pattern)",
+      "Commit 7a3f2bc in family-plan-splitter flipped the is_primary boolean"
+    ],
+    "recommended_action": [
+      "Revert commit 7a3f2bc and redeploy the splitter",
+      "Rerate the affected billing cycle and rebalance charges across lines",
+      "Issue adjustment invoices per affected family account",
+      "Add an invariant test: sum(allocations) == plan_total AND primary_share > 0"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Zero primary revenue on affected family accounts",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "ZB-012",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Accounts whose certificate-based inter-service auth just expired show $0",
+    "root_cause": "Expired mTLS certificate between billing and provisioning services — rate-lookup calls began failing silently (caught exception → default=0.0) after the cert expired at midnight UTC, so rating defaulted to zero for all downstream lookups.",
+    "supporting_evidence": [
+      "Zero-Billing RCA Playbook: Inter-Service Auth Failure pattern",
+      "Expired cert CN=billing-to-provisioning with NotAfter matching failure window",
+      "Exception log 'SSLHandshakeException' with swallowed stack trace in RateLookupClient"
+    ],
+    "recommended_action": [
+      "Renew and rotate the inter-service certificate",
+      "Restart rating-engine instances to pick up the new cert",
+      "Replace silent exception catch with fail-closed behavior and explicit alert",
+      "Onboard the cert to the auto-renewal pipeline with 30-day expiry alerting"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "All recurring + usage revenue for the outage window",
+    "author": "seed"
+  },
+
+  {
+    "anomaly_id": "DC-001",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Customer billed twice for same monthly charges with identical timestamps",
+    "root_cause": "CDR deduplication engine failure — the deduplication process was bypassed during a system restart, allowing duplicate CDR records to pass through to the rating engine.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: CDR Deduplication Engine Failure pattern",
+      "3GPP TS 32.240 Section 4.3 — CDR uniqueness requirements",
+      "System restart event logged 30 minutes before duplicate CDRs appeared"
+    ],
+    "recommended_action": [
+      "Remove duplicate CDRs from billing records",
+      "Issue refund/credit for overcharged amount",
+      "Restart and validate deduplication engine",
+      "Reprocess affected billing records"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Duplicate charge amount per affected customer",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "DC-002",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Customer shows doubled MonthlyCharges with two billing entries separated by seconds",
+    "root_cause": "Billing system retry logic error — the retry mechanism for a failed transaction duplicated the charge when the original transaction actually succeeded but confirmation was lost.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: Billing System Retry Logic Error pattern",
+      "Two charge entries with same amount but different transaction IDs",
+      "System timeout event logged between the two transactions"
+    ],
+    "recommended_action": [
+      "Implement transaction-level idempotency checks",
+      "Reverse the duplicate charge",
+      "Add unique transaction ID verification before charge posting",
+      "Audit retry logic configuration"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "MonthlyCharges x duplicate_count",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "DC-003",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Enterprise customer with bundled services billed by two different billing subsystems",
+    "root_cause": "Cross-system synchronization failure — voice and data billing systems both processed the same usage events for a bundled service plan, resulting in double billing.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: Cross-System Synchronization Failure pattern",
+      "Charges from two different billing system IDs for same usage",
+      "Recent change to billing system orchestration routing rules"
+    ],
+    "recommended_action": [
+      "Fix routing rules to prevent cross-system duplicate processing",
+      "Reconcile and reverse duplicate charges",
+      "Strengthen inter-system deduplication checks"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Total duplicate amount across affected accounts",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "DC-004",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Charges spike exactly 2x for a contiguous window of accounts processed after a Kafka consumer rebalance",
+    "root_cause": "Kafka consumer group rebalance replay — the rating consumer's offset commit was asynchronous and the rebalance replayed ~5 minutes of CDRs, causing the same events to be charged twice.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: Kafka Replay on Rebalance pattern",
+      "Consumer lag chart shows spike and replay at rebalance timestamp",
+      "enable.auto.commit=true and commit interval exceeded processing latency"
+    ],
+    "recommended_action": [
+      "Switch rating consumer to synchronous commit after successful rating",
+      "Introduce idempotency key (CDR ID + billing_cycle) at the charge-insert step",
+      "Issue reversals for the duplicate charge window",
+      "Add consumer-lag-spike alert as an early signal"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "2x rated revenue for the replay window",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "DC-005",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Charges double only for accounts whose region failed over to the DR site last night",
+    "root_cause": "DR failback replay — the primary site came back online without a 'charges-already-posted' reconciliation, and the primary replayed the DR-processed queue, creating duplicates.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: DR Failback Replay pattern",
+      "Failover timestamp aligns with start of duplicate window",
+      "No reconciliation job recorded in the runbook execution log for failback"
+    ],
+    "recommended_action": [
+      "Reverse duplicates identified by (account_id, cdr_hash) present on both sites",
+      "Add mandatory reconciliation step to the failback runbook",
+      "Persist a global 'posted-set' in the shared cache referenced by both sites",
+      "Tabletop exercise for DR cutover covering idempotency"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Duplicated revenue for DR-served traffic",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "DC-006",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "A reversal posted but the original charge was not voided, leading to a net-neutral ledger but a doubled invoice amount",
+    "root_cause": "Refund-without-void accounting bug — the CSR-initiated refund created an opposing entry rather than voiding the original, which the invoice-generator summed as two separate positive charges in the 'charges' column while netting to zero in the ledger.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: Refund-Without-Void pattern",
+      "Invoice line items show original + reversal as two positive entries",
+      "Accounting ledger nets to zero but customer-visible invoice does not"
+    ],
+    "recommended_action": [
+      "Void the original charge and remove the opposing reversal from invoice view",
+      "Regenerate and resend affected invoices with apology communication",
+      "Change refund workflow to issue a void for same-cycle cancellations",
+      "Add invoice invariant: no two same-amount charges within 60 seconds"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Reputational; ledger impact zero but customer complaints expected",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "DC-007",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Customers in multi-state regions see same usage charged twice under different jurisdictional tax lines",
+    "root_cause": "Tax engine double-levy — after the rollout of the new location-resolver, cross-state customers matched both origin and destination tax jurisdictions and the tax engine applied both levies instead of choosing the canonical one.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: Cross-Jurisdiction Double Tax pattern",
+      "Tax engine release notes for location-resolver v2 list this as a known edge case",
+      "Affected accounts all have origin_state != destination_state"
+    ],
+    "recommended_action": [
+      "Revert location-resolver to v1 or hotfix the jurisdiction-selection logic",
+      "Issue tax credit for the duplicate jurisdictional charges",
+      "Regulatory disclosure if required in the affected states",
+      "Add a jurisdiction-conflict test matrix covering 10 multi-state scenarios"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Extra tax line amount across affected accounts plus regulatory risk",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "DC-008",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Subscription charges appear once under 'recurring' and once under 'daily' on the same invoice",
+    "root_cause": "Daily and monthly schedulers both activated for the same service — a migration from daily-prorated to monthly-fixed billing left the daily job enabled in production, emitting charges on both schedules.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: Dual-Scheduler Migration Gap pattern",
+      "Cron table shows both monthly_billing.sh and daily_billing.sh enabled for the affected plan",
+      "Migration runbook step 'disable daily scheduler' marked incomplete"
+    ],
+    "recommended_action": [
+      "Disable the daily scheduler for migrated plans immediately",
+      "Reverse the daily-component charges on affected invoices",
+      "Add a runbook checklist gate in the deployment system",
+      "Emit a billing-scheduler metric and alert when > 1 scheduler per plan is active"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "31x intended rate (daily + monthly) for the migration window",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "DC-009",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Dual-homed CDR collection produced duplicate records in Africa-region accounts",
+    "root_cause": "Dual-homed CDR forwarding — both primary and standby mediation paths were active simultaneously after a regional network change, and the CDR router forwarded to both, doubling the events delivered to rating.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: Dual-Homed Mediation pattern",
+      "Network change NC-8172 set primary=active AND standby=active on CDR router",
+      "Rating input topic message count exactly 2x the network element emission count"
+    ],
+    "recommended_action": [
+      "Reset CDR router to active/standby mode (one active path only)",
+      "Deduplicate rating input for the overlap window by (IMSI, timestamp, cdr_id)",
+      "Reverse duplicated charges on affected customer invoices",
+      "Add a continuous check on CDR source-to-rating count ratio; alert if > 1.05"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Doubled usage revenue in the affected region for the window",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "DC-010",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Enterprise customers with long-running sessions see intermediate and final CDRs both rated as full sessions",
+    "root_cause": "Interim CDR semantics lost in new rating pipeline — the refactored pipeline stopped correlating interim (S-CDR) and final (F-CDR) CDRs by session-ID, treating each as a standalone billable session instead of aggregating.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: Interim/Final CDR Correlation Defect pattern",
+      "3GPP TS 32.298 section on S-CDR and F-CDR semantics cites this as a known hazard",
+      "Pipeline rewrite removed the session-ID correlation index"
+    ],
+    "recommended_action": [
+      "Re-introduce session-ID correlation and aggregation in the rating pipeline",
+      "Re-rate long sessions in the affected window and adjust charges",
+      "Issue credit for double-counted session minutes",
+      "Contract test the pipeline against a synthetic session spanning 3 interim and 1 final CDR"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Session-charge doubling for affected enterprise customers",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "DC-011",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Recurring charges posted on both the 1st and the 2nd of the month for a subset of accounts",
+    "root_cause": "Scheduler retry without idempotency — the invoicing job failed at 23:59 on the 1st, was restarted at 00:01 on the 2nd by the watchdog, and both runs posted recurring charges since the idempotency key was derived from the run timestamp.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: Scheduler Retry Idempotency Defect pattern",
+      "Watchdog log shows job restart two minutes after failure",
+      "Idempotency key uses wall-clock date rather than logical billing date"
+    ],
+    "recommended_action": [
+      "Reverse the duplicate postings on the 2nd",
+      "Change idempotency key to (account_id, billing_cycle_id) deterministically",
+      "Make the invoicing job a pure function of inputs to allow safe retry",
+      "Add a post-run assertion that charge count == expected account count"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Duplicate monthly recurring revenue for affected accounts",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "DC-012",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Customer reports seeing the same $ amount posted at the same timestamp on two line items under different SKUs",
+    "root_cause": "Catalog SKU duplication — a catalog refresh introduced a shadow SKU that pointed to the same rating rule, causing the product catalog join to emit two rows per service, each charged separately.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: Catalog Shadow-SKU pattern",
+      "Catalog table shows two SKUs with identical rating_rule_id",
+      "Catalog refresh ticket CAT-2031 introduced the shadow SKU 14 days ago"
+    ],
+    "recommended_action": [
+      "Deactivate the shadow SKU in the catalog",
+      "Reverse the duplicate SKU charges and consolidate to a single line item",
+      "Add a unique constraint (rating_rule_id) on the SKU table",
+      "Automate catalog refresh diff-review before publishing to production"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Per-SKU doubling; moderate",
+    "author": "seed"
+  },
+
+  {
+    "anomaly_id": "US-001",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "Customer data usage increased 10x overnight with charges far above historical baseline",
+    "root_cause": "Potential fraudulent SIM cloning or account compromise — unauthorized usage detected from geographic locations inconsistent with customer's profile.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Fraudulent SIM Cloning pattern",
+      "Usage from two different geographic locations simultaneously",
+      "Customer profile shows no travel history"
+    ],
+    "recommended_action": [
+      "Immediately suspend account for security investigation",
+      "Issue replacement SIM to customer",
+      "Reverse fraudulent charges",
+      "File fraud report with security team"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Fraudulent usage charges requiring reversal",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "US-002",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "Monthly charges jumped to 10x normal but usage pattern shows continuous 24/7 data consumption",
+    "root_cause": "Device malware or malfunctioning application generating excessive background data usage. Customer's device has a rogue process consuming data continuously.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Device Malware pattern",
+      "Continuous 24/7 usage pattern (not human-like burst pattern)",
+      "Data usage is upload-heavy (malware exfiltration indicator)"
+    ],
+    "recommended_action": [
+      "Advise customer on device security scan",
+      "Apply retroactive data cap if plan allows",
+      "Consider goodwill credit for device-related issue",
+      "Flag for customer outreach"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Potential goodwill credit amount",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "US-003",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "Multiple customers on same plan showing exactly 10x usage spike simultaneously",
+    "root_cause": "Rating engine metering error — a bug in the rating engine multiplied usage quantities by an incorrect factor (10x) for all customers on the affected plan.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Metering/Rating Error pattern",
+      "Multiple customers on same plan affected simultaneously",
+      "Spike is exactly 10x normal (round multiplier)",
+      "Recent rating engine configuration change identified"
+    ],
+    "recommended_action": [
+      "Correct rating engine calculation logic",
+      "Reprocess all affected CDRs with correct metering",
+      "Issue corrective billing for all affected customers",
+      "Implement rating accuracy regression tests"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Overcharged amount across all affected customers",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "US-004",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "IoT-tier accounts show a sudden sustained 10x data usage during off-peak hours",
+    "root_cause": "Runaway IoT device firmware loop — a firmware update pushed to a class of connected sensors introduced a retry loop that continuously re-established data sessions, each generating a full handshake plus payload.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Runaway IoT Firmware pattern",
+      "All affected devices share the same firmware version deployed last week",
+      "CDR duration distribution bimodal: short handshakes repeated at millisecond interval"
+    ],
+    "recommended_action": [
+      "Coordinate with IoT partner to roll back the firmware",
+      "Apply emergency data cap on the affected device SKUs",
+      "Credit the excess usage under IoT-partner SLA",
+      "Add a pre-deployment traffic shaping test for firmware updates"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Largely refund/credit; partner-covered under SLA",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "US-005",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "Customer usage 10x normal correlates with a video streaming app update date",
+    "root_cause": "Streaming app default changed to ultra-HD — a popular streaming app pushed an update that defaulted to 4K streaming on cellular, multiplying data usage for all its users on the mobile network.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Streaming-App Default Bitrate Change pattern",
+      "User-agent on high-usage sessions matches the app update version",
+      "Public release notes confirm the default-4K change"
+    ],
+    "recommended_action": [
+      "Customer-facing advisory with instructions to change app settings",
+      "Offer one-time goodwill credit and a data-booster option",
+      "Engage the streaming partner about lowering cellular default bitrate",
+      "Add traffic-classification telemetry so future partner-driven shifts are detected faster"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Goodwill credits; partially recoverable via boosters",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "US-006",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "Handover-heavy customers in high-mobility routes show 10x session counts",
+    "root_cause": "LTE-to-5G inter-RAT handover double-counting — the mediation layer counted both the LTE closeout CDR and the 5G startup CDR as separate billable sessions instead of stitching them, inflating session and volume counts.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Handover Session-Stitching Defect pattern",
+      "3GPP TS 32.298 section on session continuity flags referenced in engineering ticket",
+      "Spike magnitude correlates with customer mobility score from RAN analytics"
+    ],
+    "recommended_action": [
+      "Re-enable the session-continuity flag in the mediation config",
+      "Re-rate affected sessions by stitching paired CDRs",
+      "Issue credits for the over-counted sessions",
+      "Add a cross-RAT continuity counter to the dashboard"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Overcharged session volume for mobile-heavy users",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "US-007",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "VPN-enabled business accounts show 10x data usage after a corporate client config push",
+    "root_cause": "VPN full-tunnel misconfiguration — a corporate MDM push set the VPN client to full-tunnel on cellular instead of split-tunnel, so all device traffic (including streaming and backup) now counts against the cellular plan.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: VPN Routing Misconfig pattern",
+      "Traffic mix shifted from previously application-scoped to all-HTTPS to one egress",
+      "Corporate client change ticket CORP-9912 rolled out the same day"
+    ],
+    "recommended_action": [
+      "Work with the corporate customer to revert to split-tunnel",
+      "Offer temporary data-cap relief while the rollback completes",
+      "Credit excess usage proportionally to the mis-configuration window",
+      "Add detection rule: sustained > 5x historical baseline + egress fan-in"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Partial credit + revenue retention",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "US-008",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "Volumetric spike isolated to uplink while downlink stays flat",
+    "root_cause": "DDoS amplification exposure — the customer's IoT gateway was exploited as a reflector in a DNS amplification attack, sending large uplink packets in response to small queries.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Amplification-Reflection Exploit pattern",
+      "Uplink-to-downlink ratio inverted from historical norm",
+      "Threat intel feed flagged the destination IP as an amplification target"
+    ],
+    "recommended_action": [
+      "Block amplification-source ports at the PGW/UPF for the affected APN",
+      "Credit the fraudulent uplink traffic",
+      "Advise the customer to patch the gateway firmware",
+      "Add an uplink-skew anomaly detector to the security pipeline"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Credited uplink usage + security remediation",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "US-009",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "High-tier 5G customers show 10x volumetric usage same day as network capacity upgrade",
+    "root_cause": "5G speed uplift without plan uplift — a RAN software upgrade increased peak throughput, and customers on flat-rate-with-soft-cap plans consumed proportionally more, pushing them past cap into premium rates.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Speed-Uplift-Without-Plan-Alignment pattern",
+      "RAN config note confirms peak throughput cap raised from 200 to 1000 Mbps",
+      "Spike magnitude correlates with customer device 5G capability"
+    ],
+    "recommended_action": [
+      "Retroactively raise the soft cap for the upgrade month",
+      "Offer cap-upgrade migration path to affected customers",
+      "Align network-upgrade and plan-upgrade change management going forward",
+      "Add a pre-upgrade billing-impact assessment to RAN change process"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Partial credit; long-term ARPU uplift possible",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "US-010",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "Small cohort of customers on metered tethering show 10x usage with no change in primary-device usage",
+    "root_cause": "Tethering cap bypass defect — a UE OS update allowed tethered traffic to be tagged as primary-device traffic in the APN header, bypassing the tethering-metered rate that applied the cap.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Tethering-Tag Bypass pattern",
+      "Device OS version common across affected customers",
+      "Deep-packet inspection confirms tethered flows lacking the tethering-tag"
+    ],
+    "recommended_action": [
+      "Deploy PGW rule to reclassify flows by TTL/user-agent heuristics",
+      "Issue partial credit for mis-classified overage",
+      "Engage device OEM regarding the OS behavior change",
+      "Add metric: tethering-tag presence per APN; alert on drop"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Partially recoverable overage revenue",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "US-011",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "Dormant accounts suddenly appearing with 10x usage in a distant country",
+    "root_cause": "Account takeover via SIM swap — adversary performed SIM swap through a social-engineered CSR and immediately initiated high-value international calling and data.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: SIM Swap Account Takeover pattern",
+      "CSR audit trail shows SIM swap minutes before first fraudulent CDR",
+      "Destination numbers match known high-risk international ranges"
+    ],
+    "recommended_action": [
+      "Immediate suspension and fraud investigation for affected accounts",
+      "Reverse all fraudulent charges per operator fraud policy",
+      "Require callback + 2FA for any future SIM swap",
+      "Retrain CSR staff on social-engineering red flags"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Full write-off + regulatory complaint risk",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "US-012",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "A cohort of customers shows 10x usage every first-hour-of-day for one week",
+    "root_cause": "Daily reset window double-counting — after a metering service restart, the daily-counter reset job ran at both 00:00 and 00:05 UTC for a week, flushing the daily accumulator twice and shifting the excess into the paid bucket at the hour boundary.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Daily-Counter Reset Defect pattern",
+      "Reset-job log shows duplicate execution across 7 days",
+      "Spike confined to the 00:00–01:00 hour consistently"
+    ],
+    "recommended_action": [
+      "Remove the duplicate reset job and restore single 00:00 UTC schedule",
+      "Re-rate the week and refund the misattributed paid-bucket usage",
+      "Add a reset-job ledger so double executions are visible as metrics",
+      "Add a daily invariant test: accumulator resets exactly once per day"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Refund of paid-bucket usage for the week",
+    "author": "seed"
+  },
+
+  {
+    "anomaly_id": "CF-001",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "Customer billing record has NULL TotalCharges indicating CDR processing failure",
+    "root_cause": "CDR format mismatch after network element upgrade — the CDR format changed but the mediation system was not updated, causing field parsing failures and NULL values in billing records.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: Format Mismatch After Network Upgrade pattern",
+      "Network upgrade event logged 24 hours before failures started",
+      "CDR rejection logs show format-specific parsing errors"
+    ],
+    "recommended_action": [
+      "Update mediation device CDR parsing rules for new format",
+      "Reprocess all rejected CDRs since the network upgrade",
+      "Validate end-to-end CDR processing after fix",
+      "Add format validation to pre-upgrade checklist"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Unbilled usage for all affected accounts",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "CF-002",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "Batch of customer records with missing TotalCharges during peak traffic period",
+    "root_cause": "Data pipeline overflow during peak traffic — CDR processing pipeline buffers overflowed during peak hours, causing CDRs to be dropped and resulting in NULL billing fields.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: Data Pipeline Overflow pattern",
+      "Failures correlate with peak traffic hours (18:00-22:00)",
+      "Pipeline throughput metrics show capacity exceeded 120%"
+    ],
+    "recommended_action": [
+      "Increase CDR pipeline buffer capacity",
+      "Implement backpressure mechanisms",
+      "Scale mediation infrastructure for peak traffic",
+      "Replay lost CDRs from network element raw files"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Lost CDR value during overflow period",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "CF-003",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "Scattered NULL fields across multiple customer records with no clear time pattern",
+    "root_cause": "Database storage failure — the CDR storage database experienced intermittent connection pool exhaustion, preventing random CDR records from being fully persisted.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: Database Storage Failure pattern",
+      "Database connection pool exhaustion errors in system logs",
+      "Random pattern of failures (not correlated with time or customer segment)"
+    ],
+    "recommended_action": [
+      "Expand database connection pool size",
+      "Implement connection pool monitoring and alerting",
+      "Replay lost CDRs from mediation device buffer",
+      "Verify database health and storage capacity"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Unbilled usage for accounts with NULL records",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "CF-004",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "Burst of NULL TotalCharges aligned to the 02:00–03:00 UTC window",
+    "root_cause": "SIGTRAN link flap on the mediation interconnect — a brief loss of signaling caused the mediation layer to drop CDRs for which the correlation lookup failed, yielding NULL rated amounts.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: SIGTRAN Interconnect Flap pattern",
+      "Interconnect monitoring shows link-down events in the exact window",
+      "Correlated ticket from carrier partner about M3UA instability"
+    ],
+    "recommended_action": [
+      "Replay CDRs from the upstream network element buffer",
+      "Engage carrier partner to stabilize the SIGTRAN interconnect",
+      "Add link-flap-driven replay automation",
+      "Monitor M3UA link state with pager-level alerting"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Unbilled usage during interconnect flap",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "CF-005",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "NULL fields appear only for subscribers whose names contain extended Unicode characters",
+    "root_cause": "Schema evolution defect — the Avro schema registry upgraded to a stricter decoder that rejected surrogate-pair Unicode in the 'subscriber_name' field, causing the entire CDR to be dropped mid-pipeline.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: Schema Evolution Rejection pattern",
+      "Avro registry changelog documents stricter UTF-8 validation",
+      "All failed CDRs share non-ASCII subscriber-name bytes"
+    ],
+    "recommended_action": [
+      "Update Avro decoder to normalize surrogate pairs, not reject",
+      "Replay the dropped CDRs through the fixed decoder",
+      "Add a per-field validation metric distinguishing drop vs quarantine",
+      "Expand test fixtures to cover Unicode edge cases for every CDR field"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Unbilled usage for the Unicode-named cohort",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "CF-006",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "Cohort of enterprise customers shows missing TotalCharges after a DST transition",
+    "root_cause": "DST-driven timestamp rollback — during fall-back, CDRs with timestamps within the repeated hour were deduplicated incorrectly by a time-based primary key, and the second occurrence was dropped as a 'duplicate'.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: DST-Ambiguous Timestamp pattern",
+      "Primary-key uniqueness violations in the mediation DB at 01:00 local",
+      "3GPP TS 32.240 Section on UTC-only timestamps cited as mitigation"
+    ],
+    "recommended_action": [
+      "Migrate CDR timestamps to UTC with a separate local-time field",
+      "Replay the ambiguous-hour CDRs from the network element buffer",
+      "Rewrite the dedup key to include a monotonic sequence ID",
+      "Add a DST-transition dry-run to the bi-annual change calendar"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "One-hour unbilled cohort revenue",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "CF-007",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "Widespread NULL TotalCharges across the region served by mediation cluster 3",
+    "root_cause": "Kafka broker disk-full on the CDR-ingest cluster — producer writes began failing silently because acks=1 with retries=0 dropped messages; the NULLs propagated downstream with no raised error.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: Kafka Disk-Full Silent Drop pattern",
+      "Broker disk-usage crossed 100% 10 minutes before the loss window",
+      "Producer config acks=1 retries=0 captured in runtime config dump"
+    ],
+    "recommended_action": [
+      "Grow disk / prune retention on the affected broker",
+      "Change producer to acks=all retries=10 with idempotent producer",
+      "Replay from upstream raw CDR archive",
+      "Alert on broker disk-usage > 80% with auto-scale runbook"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Full cluster-window usage revenue",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "CF-008",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "TotalCharges NULL specifically for GGSN-originated traffic after certificate rotation",
+    "root_cause": "Diameter interface certificate mis-rotation — the new cert on the charging gateway had an incorrect SAN, causing Diameter-CCR requests to fail TLS handshake and the gateway to drop usage events silently.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: Diameter mTLS Rotation Defect pattern",
+      "Charging gateway tls-error counter spiked at rotation time",
+      "Cert SAN differs from the peer's verify list"
+    ],
+    "recommended_action": [
+      "Reissue the certificate with correct SANs and redeploy",
+      "Replay the dropped CCR events from gateway cache",
+      "Gate future cert rotations behind a peer-handshake smoke test",
+      "Alert on Diameter tls-error-rate > 0"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Full GGSN usage for the outage window",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "CF-009",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "Random scattered NULLs across all customer segments but only in recently deployed region",
+    "root_cause": "New region mediation connection pool undersized — the default pool of 20 was inadequate for production load, causing intermittent timeouts and dropped CDRs under bursty traffic.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: Undersized Connection Pool pattern",
+      "Pool-exhaustion logs frequent in the new region only",
+      "Deployment config used dev-default pool size"
+    ],
+    "recommended_action": [
+      "Raise connection pool to the standard production value and redeploy",
+      "Replay CDRs from mediation device buffer where timestamps overlap errors",
+      "Add regional capacity-planning gate in the deployment pipeline",
+      "Monitor pool saturation percentile as a first-class SRE metric"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Intermittent unbilled usage in the new region",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "CF-010",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "Missing TotalCharges for prepaid subscribers only; postpaid unaffected",
+    "root_cause": "OCS (Online Charging System) unavailability — the prepaid real-time charging system was in maintenance mode, causing prepaid CDRs to be diverted to a quarantine queue that downstream invoicing never read.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: OCS Maintenance Quarantine Backlog pattern",
+      "OCS maintenance window aligns with the failure interval",
+      "Quarantine queue depth spiked and remained elevated"
+    ],
+    "recommended_action": [
+      "Replay quarantined prepaid CDRs through OCS post-maintenance",
+      "Rate and bill the replayed events with appropriate adjustment",
+      "Add quarantine-queue depth alerting with SLO",
+      "Automate the post-maintenance quarantine drain"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Prepaid usage revenue during maintenance",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "CF-011",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "CDRs dropped during weekly archival window with NULL TotalCharges in the active DB",
+    "root_cause": "Archival job deleted before billing — the archival job truncated the CDR staging table before the weekly billing job had read it, so both the active and billing databases ended up with NULLs for the same period.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: Archival-Before-Billing Ordering Defect pattern",
+      "Cron ordering shows archival scheduled 15 minutes before billing",
+      "Audit log shows TRUNCATE on staging prior to billing SELECT"
+    ],
+    "recommended_action": [
+      "Reorder jobs so billing runs before archival, enforced by DAG",
+      "Recover CDRs from archival storage and replay billing",
+      "Replace TRUNCATE with soft-delete + retention policy",
+      "Add integration test: billing job sees staging non-empty after trigger"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Full week of unbilled usage",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "CF-012",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "Sporadic NULL TotalCharges accompanied by mediation-layer parse warnings about unexpected field types",
+    "root_cause": "Network element vendor pushed an optional CDR field as integer instead of string — mediation's lax parser accepted the event but emitted the amount field as NULL when the downstream rating lookup failed.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: Vendor-Optional-Field Type Drift pattern",
+      "Vendor release notes show field type change for optional attribute",
+      "Mediation parse-warning counter correlates exactly with NULL record count"
+    ],
+    "recommended_action": [
+      "Update the mediation parser to coerce the field back to string",
+      "Replay the affected CDRs through the fixed parser",
+      "Make the parser strict mode the default and quarantine type-drift events",
+      "Require vendors to announce CDR-schema changes via a contract test"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Sporadic unbilled usage",
+    "author": "seed"
+  },
+
+  {
+    "anomaly_id": "SB-001",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Enterprise customer monthly charges exceed contract cap by 50-200%",
+    "root_cause": "Contract threshold not applied in rating engine — the customer's billing cap was not properly configured, allowing charges to exceed the contractual maximum.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Contract Threshold Not Applied pattern",
+      "CRM shows billing cap of $500/month but current charge is $1200",
+      "Rating engine configuration audit shows missing cap rule for this account"
+    ],
+    "recommended_action": [
+      "Correct rating engine configuration with proper billing cap",
+      "Reprocess bills from the date cap should have been applied",
+      "Issue refund for all overcharges above contract cap",
+      "Calculate and apply SLA penalty credits per contract terms"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Refund amount = (actual charges - cap) x affected_months",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "SB-002",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Customer charges spiked after plan migration with charges at default uncapped rates",
+    "root_cause": "Plan migration error — during plan upgrade, old plan billing rules were deactivated before new plan rules were fully configured, resulting in default (uncapped) billing rates.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Plan Migration Error pattern",
+      "Plan change event logged 5 days before charges spiked",
+      "Billing applied default/fallback rates instead of new plan rates"
+    ],
+    "recommended_action": [
+      "Apply correct plan rules retroactively from migration date",
+      "Refund excess charges above new plan rates",
+      "Fix plan migration workflow to prevent future gaps",
+      "Audit all recent plan migrations for similar issues"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Excess charges from migration date to detection"
+    ,"author": "seed"
+  },
+  {
+    "anomaly_id": "SB-003",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Charges exceed plan limits due to previously included usage now classified as premium",
+    "root_cause": "Usage type reclassification — a change in usage classification rules caused previously included usage to be reclassified as out-of-plan premium usage, incurring additional charges.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Usage Type Reclassification pattern",
+      "Classification rule change logged 2 weeks before SLA breach",
+      "Multiple customers on similar plans affected"
+    ],
+    "recommended_action": [
+      "Revert incorrect usage classification",
+      "Reprocess bills for all affected customers",
+      "Issue credits for incorrectly classified usage charges",
+      "Implement classification change impact analysis before deployment"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Total incorrect premium charges across affected customers",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "SB-004",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Enterprise MPLS customer's monthly charges exceed committed-spend floor despite availability breach",
+    "root_cause": "Availability SLA credit not auto-applied — availability dropped below 99.9% in two sites but the SLA-credit engine was waiting on a manual ticket that was never filed, so the customer was billed full with no credit offset.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Availability-Credit Workflow Gap pattern",
+      "Network availability report shows 99.72% for the affected region",
+      "SLA credit engine input queue has zero entries for the month"
+    ],
+    "recommended_action": [
+      "Auto-ingest availability reports directly into the SLA credit engine",
+      "Issue retroactive SLA credits to all affected enterprise customers",
+      "Add alerting when SLA-credit queue depth is zero during a known outage",
+      "Run quarterly SLA-credit reconciliation with Finance"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Withheld SLA credits; regulatory and contractual exposure",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "SB-005",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Customer first-bill after contract renewal shows charges at legacy rate card",
+    "root_cause": "Contract renewal not published to rating — the renewed contract was approved in CRM but the 'publish-to-rating' webhook failed silently, leaving rating on the legacy (higher) rate card.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Contract Publish Webhook Failure pattern",
+      "CRM shows contract version v4 but rating engine is still on v3",
+      "Webhook dead-letter queue has entries for the affected account"
+    ],
+    "recommended_action": [
+      "Replay the webhook to publish contract v4",
+      "Rerate and refund the excess to the new contract floor",
+      "Add an alert on non-zero webhook DLQ",
+      "Introduce a rating-vs-CRM version drift dashboard"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Overcharge = (legacy − renewed) × usage for the cycle",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "SB-006",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Enterprise latency-sensitive customer breaches latency commitment for 12 consecutive days",
+    "root_cause": "Latency SLA measurement window drifted — the probe schedule was coarsened from 1-minute to 5-minute samples during a cost-cutting change, causing short latency spikes to be smoothed out of reporting but still breach the contract when measured externally.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Observability Granularity Drift pattern",
+      "Change ticket CHG-55102 coarsened probe schedule",
+      "Customer-side synthetic checks report latency breaches not seen internally"
+    ],
+    "recommended_action": [
+      "Restore 1-minute probe granularity on committed-latency circuits",
+      "Issue latency-breach credits per the contract",
+      "Align internal and customer-facing SLA measurement methodology",
+      "Document SLA measurement methodology in the contract appendix"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Latency-breach credits plus contract renegotiation risk",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "SB-007",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Customers on commitment-discount plans are billed undiscounted after reaching commitment tier",
+    "root_cause": "Tiered commitment discount not stepped — the discount-stepping function rounded tier thresholds incorrectly so customers who exactly hit the tier were placed in the next-lower discount bucket, resulting in overcharges.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Tier Threshold Rounding pattern",
+      "Pricing function uses floor() where ceil() was intended",
+      "Affected accounts sit exactly at tier boundary usage"
+    ],
+    "recommended_action": [
+      "Patch the discount-stepping function to use ceil() at boundaries",
+      "Rerate affected customers and refund the differential",
+      "Add property-based test over the entire tier boundary set",
+      "Publish internal advisory on tier-boundary rounding to Pricing and Finance"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Per-customer differential × cohort",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "SB-008",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "International roaming customers exceed contractual roaming-uplift cap",
+    "root_cause": "Regulatory cap not applied to inbound roamers — a new regulatory roaming cap was configured only for the outbound direction; inbound partner-served subscribers bypassed the cap and were charged full roaming rate.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Roaming-Regulatory-Cap Scope Defect pattern",
+      "Regulatory bulletin references both inbound and outbound scope",
+      "Tariff config shows cap applied only to direction=outbound"
+    ],
+    "recommended_action": [
+      "Extend the regulatory cap to both directions in the tariff table",
+      "Rerate affected inbound roaming usage",
+      "Notify regulator proactively of the correction and refunds",
+      "Add a regulatory-compliance review gate to tariff changes"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Regulatory penalty risk plus refund obligations",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "SB-009",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Revenue-assurance leakage exceeds 0.5% contractual ceiling for two consecutive months",
+    "root_cause": "New rating pipeline introduced systematic leakage — a refactor of the rating pipeline silently dropped a specific event type ('supplementary service'), moving recognized revenue below the contractual leakage threshold.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Revenue-Assurance Leakage Spike pattern",
+      "Event-type counter for supplementary-service is zero post-refactor",
+      "RA reconciliation shows expected-vs-actual delta above threshold"
+    ],
+    "recommended_action": [
+      "Restore the supplementary-service event path in rating",
+      "Backfill the missing charges with customer communication",
+      "Instrument per-event-type rating success rate dashboard",
+      "Require RA sign-off on any rating-pipeline refactor"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Full supplementary-service revenue for the window",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "SB-010",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Complaint-response-time SLA missed for 20% of enterprise tickets",
+    "root_cause": "Ticket routing regression — a CRM upgrade mis-routed enterprise tickets to the consumer queue, adding hours of triage latency and breaching the 4-hour enterprise response SLA.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Enterprise-Ticket Misroute pattern",
+      "Ticket queue distribution shifted 20% toward consumer after upgrade",
+      "Customer segment tag stripped by the upgrade's normalizer"
+    ],
+    "recommended_action": [
+      "Restore the customer-segment tag retention in the CRM normalizer",
+      "Issue SLA credits per contract for each breached ticket",
+      "Retroactively re-route open enterprise tickets to the correct queue",
+      "Add an integration test asserting segment preservation end-to-end"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "SLA credits proportional to breached tickets",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "SB-011",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Metered Minutes-of-Use overage credit not applied to enterprise voice customers",
+    "root_cause": "Overage-credit generator skipped an accounting period — a calendar-library bug caused the generator to treat the month as having 0 periods after a leap-second, producing no credit rows for that month.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Calendar Leap-Second Defect pattern",
+      "Generator log: 'periods=0' for the affected month",
+      "Library upgrade notes flag this as a known regression"
+    ],
+    "recommended_action": [
+      "Upgrade or patch the calendar library",
+      "Re-run the credit generator for the affected month",
+      "Issue the missing overage credits",
+      "Add an assertion that generated-credit count > 0 for any active month"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Withheld overage credits; contractual breach risk",
+    "author": "seed"
+  },
+  {
+    "anomaly_id": "SB-012",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Enterprise customer sees charges that exceed the regulated Universal Service Fund cap",
+    "root_cause": "USF cap calculated against pre-discount total instead of post-discount total — a change in tax-engine ordering placed USF before the commitment discount, inflating the regulated cap base.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Tax/Discount Ordering Drift pattern",
+      "Tax-engine ordering rule changed in release TAX-2026.02",
+      "USF cap formula expects post-discount base per regulator guidance"
+    ],
+    "recommended_action": [
+      "Restore USF calculation order: discounts first, then USF, then tax",
+      "Rerate and refund the over-applied USF",
+      "Document ordering invariants with formal test coverage",
+      "Notify regulator of correction if required by jurisdiction"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Refund of over-applied USF plus regulator risk",
+    "author": "seed"
+  }
+]

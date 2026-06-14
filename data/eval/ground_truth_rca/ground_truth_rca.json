@@ -1,0 +1,284 @@
+[
+  {
+    "anomaly_id": "ZB-001",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Active customer with InternetService=Fiber, MonthlyCharges suddenly 0",
+    "root_cause": "Billing system failed to process CDR for current cycle. Likely cause: CDR ingestion pipeline timeout during batch processing window, resulting in zero-rated billing record.",
+    "supporting_evidence": [
+      "3GPP TS 32.240 Section 5.2 — CDR processing timeout handling",
+      "SLA Document — Section 3.1: Billing accuracy guarantee >= 99.5%",
+      "Zero-Billing RCA Playbook: CDR Ingestion Pipeline Timeout pattern"
+    ],
+    "recommended_action": [
+      "Trigger CDR reprocessing for affected account",
+      "Verify CDR pipeline health for batch window",
+      "Issue corrective billing statement"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "MonthlyCharges x affected_accounts"
+  },
+  {
+    "anomaly_id": "ZB-002",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Customer with active PhoneService and multiple streaming services showing $0 monthly charge",
+    "root_cause": "Provisioning system mismatch — customer was provisioned for services but billing system not updated. Service activation event did not propagate to billing platform.",
+    "supporting_evidence": [
+      "Provisioning-to-billing sync protocol documentation",
+      "Zero-Billing RCA Playbook: Provisioning System Mismatch pattern",
+      "CRM shows active services but billing system shows inactive"
+    ],
+    "recommended_action": [
+      "Resync provisioning system with billing platform",
+      "Issue corrective bill for missed billing cycles",
+      "Audit provisioning event queue for other stuck messages"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "MonthlyCharges x missed_cycles"
+  },
+  {
+    "anomaly_id": "ZB-003",
+    "anomaly_type": "zero_billing",
+    "affected_pattern": "Multiple customers on same tariff plan showing zero charges in same billing cycle",
+    "root_cause": "Rating engine configuration error — incorrect tariff plan configuration rating service usage at $0 for the specific plan variant.",
+    "supporting_evidence": [
+      "Zero-Billing RCA Playbook: Rating Engine Configuration Error pattern",
+      "Multiple customers on same plan affected simultaneously",
+      "Recent configuration change to tariff plan identified in change log"
+    ],
+    "recommended_action": [
+      "Correct tariff configuration in rating engine",
+      "Reprocess all affected CDRs for the billing cycle",
+      "Implement configuration change validation checks"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Sum of expected charges for all affected customers"
+  },
+  {
+    "anomaly_id": "DC-001",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Customer billed twice for same monthly charges with identical timestamps",
+    "root_cause": "CDR deduplication engine failure — the deduplication process was bypassed during a system restart, allowing duplicate CDR records to pass through to the rating engine.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: CDR Deduplication Engine Failure pattern",
+      "3GPP TS 32.240 Section 4.3 — CDR uniqueness requirements",
+      "System restart event logged 30 minutes before duplicate CDRs appeared"
+    ],
+    "recommended_action": [
+      "Remove duplicate CDRs from billing records",
+      "Issue refund/credit for overcharged amount",
+      "Restart and validate deduplication engine",
+      "Reprocess affected billing records"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Duplicate charge amount per affected customer"
+  },
+  {
+    "anomaly_id": "DC-002",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Customer shows doubled MonthlyCharges with two billing entries separated by seconds",
+    "root_cause": "Billing system retry logic error — the retry mechanism for a failed transaction duplicated the charge when the original transaction actually succeeded but confirmation was lost.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: Billing System Retry Logic Error pattern",
+      "Two charge entries with same amount but different transaction IDs",
+      "System timeout event logged between the two transactions"
+    ],
+    "recommended_action": [
+      "Implement transaction-level idempotency checks",
+      "Reverse the duplicate charge",
+      "Add unique transaction ID verification before charge posting",
+      "Audit retry logic configuration"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "MonthlyCharges x duplicate_count"
+  },
+  {
+    "anomaly_id": "DC-003",
+    "anomaly_type": "duplicate_charge",
+    "affected_pattern": "Enterprise customer with bundled services billed by two different billing subsystems",
+    "root_cause": "Cross-system synchronization failure — voice and data billing systems both processed the same usage events for a bundled service plan, resulting in double billing.",
+    "supporting_evidence": [
+      "Duplicate Charge RCA Playbook: Cross-System Synchronization Failure pattern",
+      "Charges from two different billing system IDs for same usage",
+      "Recent change to billing system orchestration routing rules"
+    ],
+    "recommended_action": [
+      "Fix routing rules to prevent cross-system duplicate processing",
+      "Reconcile and reverse duplicate charges",
+      "Strengthen inter-system deduplication checks"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Total duplicate amount across affected accounts"
+  },
+  {
+    "anomaly_id": "US-001",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "Customer data usage increased 10x overnight with charges far above historical baseline",
+    "root_cause": "Potential fraudulent SIM cloning or account compromise — unauthorized usage detected from geographic locations inconsistent with customer's profile.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Fraudulent SIM Cloning pattern",
+      "Usage from two different geographic locations simultaneously",
+      "Customer profile shows no travel history"
+    ],
+    "recommended_action": [
+      "Immediately suspend account for security investigation",
+      "Issue replacement SIM to customer",
+      "Reverse fraudulent charges",
+      "File fraud report with security team"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Fraudulent usage charges requiring reversal"
+  },
+  {
+    "anomaly_id": "US-002",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "Monthly charges jumped to 10x normal but usage pattern shows continuous 24/7 data consumption",
+    "root_cause": "Device malware or malfunctioning application generating excessive background data usage. Customer's device has a rogue process consuming data continuously.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Device Malware pattern",
+      "Continuous 24/7 usage pattern (not human-like burst pattern)",
+      "Data usage is upload-heavy (malware exfiltration indicator)"
+    ],
+    "recommended_action": [
+      "Advise customer on device security scan",
+      "Apply retroactive data cap if plan allows",
+      "Consider goodwill credit for device-related issue",
+      "Flag for customer outreach"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Potential goodwill credit amount"
+  },
+  {
+    "anomaly_id": "US-003",
+    "anomaly_type": "usage_spike",
+    "affected_pattern": "Multiple customers on same plan showing exactly 10x usage spike simultaneously",
+    "root_cause": "Rating engine metering error — a bug in the rating engine multiplied usage quantities by an incorrect factor (10x) for all customers on the affected plan.",
+    "supporting_evidence": [
+      "Usage Spike RCA Playbook: Metering/Rating Error pattern",
+      "Multiple customers on same plan affected simultaneously",
+      "Spike is exactly 10x normal (round multiplier)",
+      "Recent rating engine configuration change identified"
+    ],
+    "recommended_action": [
+      "Correct rating engine calculation logic",
+      "Reprocess all affected CDRs with correct metering",
+      "Issue corrective billing for all affected customers",
+      "Implement rating accuracy regression tests"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Overcharged amount across all affected customers"
+  },
+  {
+    "anomaly_id": "CF-001",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "Customer billing record has NULL TotalCharges indicating CDR processing failure",
+    "root_cause": "CDR format mismatch after network element upgrade — the CDR format changed but the mediation system was not updated, causing field parsing failures and NULL values in billing records.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: Format Mismatch After Network Upgrade pattern",
+      "Network upgrade event logged 24 hours before failures started",
+      "CDR rejection logs show format-specific parsing errors"
+    ],
+    "recommended_action": [
+      "Update mediation device CDR parsing rules for new format",
+      "Reprocess all rejected CDRs since the network upgrade",
+      "Validate end-to-end CDR processing after fix",
+      "Add format validation to pre-upgrade checklist"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Unbilled usage for all affected accounts"
+  },
+  {
+    "anomaly_id": "CF-002",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "Batch of customer records with missing TotalCharges during peak traffic period",
+    "root_cause": "Data pipeline overflow during peak traffic — CDR processing pipeline buffers overflowed during peak hours, causing CDRs to be dropped and resulting in NULL billing fields.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: Data Pipeline Overflow pattern",
+      "Failures correlate with peak traffic hours (18:00-22:00)",
+      "Pipeline throughput metrics show capacity exceeded 120%"
+    ],
+    "recommended_action": [
+      "Increase CDR pipeline buffer capacity",
+      "Implement backpressure mechanisms",
+      "Scale mediation infrastructure for peak traffic",
+      "Replay lost CDRs from network element raw files"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Lost CDR value during overflow period"
+  },
+  {
+    "anomaly_id": "CF-003",
+    "anomaly_type": "cdr_failure",
+    "affected_pattern": "Scattered NULL fields across multiple customer records with no clear time pattern",
+    "root_cause": "Database storage failure — the CDR storage database experienced intermittent connection pool exhaustion, preventing random CDR records from being fully persisted.",
+    "supporting_evidence": [
+      "CDR Failure RCA Playbook: Database Storage Failure pattern",
+      "Database connection pool exhaustion errors in system logs",
+      "Random pattern of failures (not correlated with time or customer segment)"
+    ],
+    "recommended_action": [
+      "Expand database connection pool size",
+      "Implement connection pool monitoring and alerting",
+      "Replay lost CDRs from mediation device buffer",
+      "Verify database health and storage capacity"
+    ],
+    "severity": "MEDIUM",
+    "estimated_revenue_impact": "Unbilled usage for accounts with NULL records"
+  },
+  {
+    "anomaly_id": "SB-001",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Enterprise customer monthly charges exceed contract cap by 50-200%",
+    "root_cause": "Contract threshold not applied in rating engine — the customer's billing cap was not properly configured, allowing charges to exceed the contractual maximum.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Contract Threshold Not Applied pattern",
+      "CRM shows billing cap of $500/month but current charge is $1200",
+      "Rating engine configuration audit shows missing cap rule for this account"
+    ],
+    "recommended_action": [
+      "Correct rating engine configuration with proper billing cap",
+      "Reprocess bills from the date cap should have been applied",
+      "Issue refund for all overcharges above contract cap",
+      "Calculate and apply SLA penalty credits per contract terms"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Refund amount = (actual charges - cap) x affected_months"
+  },
+  {
+    "anomaly_id": "SB-002",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Customer charges spiked after plan migration with charges at default uncapped rates",
+    "root_cause": "Plan migration error — during plan upgrade, old plan billing rules were deactivated before new plan rules were fully configured, resulting in default (uncapped) billing rates.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Plan Migration Error pattern",
+      "Plan change event logged 5 days before charges spiked",
+      "Billing applied default/fallback rates instead of new plan rates"
+    ],
+    "recommended_action": [
+      "Apply correct plan rules retroactively from migration date",
+      "Refund excess charges above new plan rates",
+      "Fix plan migration workflow to prevent future gaps",
+      "Audit all recent plan migrations for similar issues"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Excess charges from migration date to detection"
+  },
+  {
+    "anomaly_id": "SB-003",
+    "anomaly_type": "sla_breach",
+    "affected_pattern": "Charges exceed plan limits due to previously included usage now classified as premium",
+    "root_cause": "Usage type reclassification — a change in usage classification rules caused previously included usage to be reclassified as out-of-plan premium usage, incurring additional charges.",
+    "supporting_evidence": [
+      "SLA Breach RCA Playbook: Usage Type Reclassification pattern",
+      "Classification rule change logged 2 weeks before SLA breach",
+      "Multiple customers on similar plans affected"
+    ],
+    "recommended_action": [
+      "Revert incorrect usage classification",
+      "Reprocess bills for all affected customers",
+      "Issue credits for incorrectly classified usage charges",
+      "Implement classification change impact analysis before deployment"
+    ],
+    "severity": "HIGH",
+    "estimated_revenue_impact": "Total incorrect premium charges across affected customers"
+  }
+]

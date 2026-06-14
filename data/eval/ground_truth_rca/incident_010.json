@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_010",
+  "anomaly_id": "ZB-010",
+  "anomaly_type": "zero_billing",
+  "affected_pattern": "All customers invoiced between 02:00 and 03:00 UTC on DST spring-forward day show $0",
+  "root_cause": "Daylight-saving-time transition defect \u2014 the billing engine's cycle-window query used local time without DST awareness, producing a zero-duration window during the skipped hour and generating empty invoices.",
+  "supporting_evidence": [
+    "Zero-Billing RCA Playbook: DST Transition Empty Window pattern",
+    "Invoicing job logs show cycle_window_seconds=0 for the affected batch",
+    "Known issue with jdbc driver timezone handling (US/Eastern)"
+  ],
+  "recommended_action": [
+    "Rerun invoicing job for the affected hour using UTC-normalized windows",
+    "Void the empty invoices and reissue correct ones",
+    "Migrate all billing windows to UTC with explicit timezone conversion at presentation",
+    "Add a regression test exercising spring-forward and fall-back days"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

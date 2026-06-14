@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_059",
+  "anomaly_id": "SB-011",
+  "anomaly_type": "sla_breach",
+  "affected_pattern": "Metered Minutes-of-Use overage credit not applied to enterprise voice customers",
+  "root_cause": "Overage-credit generator skipped an accounting period \u2014 a calendar-library bug caused the generator to treat the month as having 0 periods after a leap-second, producing no credit rows for that month.",
+  "supporting_evidence": [
+    "SLA Breach RCA Playbook: Calendar Leap-Second Defect pattern",
+    "Generator log: 'periods=0' for the affected month",
+    "Library upgrade notes flag this as a known regression"
+  ],
+  "recommended_action": [
+    "Upgrade or patch the calendar library",
+    "Re-run the credit generator for the affected month",
+    "Issue the missing overage credits",
+    "Add an assertion that generated-credit count > 0 for any active month"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

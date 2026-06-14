@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_054",
+  "anomaly_id": "SB-006",
+  "anomaly_type": "sla_breach",
+  "affected_pattern": "Enterprise latency-sensitive customer breaches latency commitment for 12 consecutive days",
+  "root_cause": "Latency SLA measurement window drifted \u2014 the probe schedule was coarsened from 1-minute to 5-minute samples during a cost-cutting change, causing short latency spikes to be smoothed out of reporting but still breach the contract when measured externally.",
+  "supporting_evidence": [
+    "SLA Breach RCA Playbook: Observability Granularity Drift pattern",
+    "Change ticket CHG-55102 coarsened probe schedule",
+    "Customer-side synthetic checks report latency breaches not seen internally"
+  ],
+  "recommended_action": [
+    "Restore 1-minute probe granularity on committed-latency circuits",
+    "Issue latency-breach credits per the contract",
+    "Align internal and customer-facing SLA measurement methodology",
+    "Document SLA measurement methodology in the contract appendix"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

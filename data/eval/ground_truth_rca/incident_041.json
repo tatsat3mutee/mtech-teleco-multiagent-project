@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_041",
+  "anomaly_id": "CF-005",
+  "anomaly_type": "cdr_failure",
+  "affected_pattern": "NULL fields appear only for subscribers whose names contain extended Unicode characters",
+  "root_cause": "Schema evolution defect \u2014 the Avro schema registry upgraded to a stricter decoder that rejected surrogate-pair Unicode in the 'subscriber_name' field, causing the entire billing record to be dropped mid-pipeline.",
+  "supporting_evidence": [
+    "Billing Record Failure RCA Playbook: Schema Evolution Rejection pattern",
+    "Avro registry changelog documents stricter UTF-8 validation",
+    "All failed billing records share non-ASCII subscriber-name bytes"
+  ],
+  "recommended_action": [
+    "Update Avro decoder to normalize surrogate pairs, not reject",
+    "Replay the dropped billing records through the fixed decoder",
+    "Add a per-field validation metric distinguishing drop vs quarantine",
+    "Expand test fixtures to cover Unicode edge cases for every billing record field"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_045",
+  "anomaly_id": "CF-009",
+  "anomaly_type": "cdr_failure",
+  "affected_pattern": "Random scattered NULLs across all customer segments but only in recently deployed region",
+  "root_cause": "New region mediation connection pool undersized \u2014 the default pool of 20 was inadequate for production load, causing intermittent timeouts and dropped billing records under bursty traffic.",
+  "supporting_evidence": [
+    "Billing Record Failure RCA Playbook: Undersized Connection Pool pattern",
+    "Pool-exhaustion logs frequent in the new region only",
+    "Deployment config used dev-default pool size"
+  ],
+  "recommended_action": [
+    "Raise connection pool to the standard production value and redeploy",
+    "Replay billing records from billing billing mediation layer buffer where timestamps overlap errors",
+    "Add regional capacity-planning gate in the deployment pipeline",
+    "Monitor pool saturation percentile as a first-class SRE metric"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

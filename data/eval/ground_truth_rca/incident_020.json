@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_020",
+  "anomaly_id": "DC-008",
+  "anomaly_type": "duplicate_charge",
+  "affected_pattern": "Subscription charges appear once under 'recurring' and once under 'daily' on the same invoice",
+  "root_cause": "Daily and monthly schedulers both activated for the same service \u2014 a migration from daily-prorated to monthly-fixed billing left the daily job enabled in production, emitting charges on both schedules.",
+  "supporting_evidence": [
+    "Duplicate Charge RCA Playbook: Dual-Scheduler Migration Gap pattern",
+    "Cron table shows both monthly_billing.sh and daily_billing.sh enabled for the affected plan",
+    "Migration runbook step 'disable daily scheduler' marked incomplete"
+  ],
+  "recommended_action": [
+    "Disable the daily scheduler for migrated plans immediately",
+    "Reverse the daily-component charges on affected invoices",
+    "Add a runbook checklist gate in the deployment system",
+    "Emit a billing-scheduler metric and alert when > 1 scheduler per plan is active"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_011",
+  "anomaly_id": "ZB-011",
+  "anomaly_type": "zero_billing",
+  "affected_pattern": "Specific customer segment (family plan primary lines) shows $0 while secondary lines are billed normally",
+  "root_cause": "Family-plan splitter attributed the full plan charge to secondary lines and nothing to the primary \u2014 a recent refactor inverted the primary/secondary flag when computing the per-line allocation.",
+  "supporting_evidence": [
+    "Zero-Billing RCA Playbook: Multi-Line Allocation Inversion pattern",
+    "Secondary lines show duplicated full charges (matching Duplicate-Charge pattern)",
+    "Commit 7a3f2bc in family-plan-splitter flipped the is_primary boolean"
+  ],
+  "recommended_action": [
+    "Revert commit 7a3f2bc and redeploy the splitter",
+    "Rerate the affected billing cycle and rebalance charges across lines",
+    "Issue adjustment invoices per affected family account",
+    "Add an invariant test: sum(allocations) == plan_total AND primary_share > 0"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

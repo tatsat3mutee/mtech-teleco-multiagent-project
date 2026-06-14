@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_036",
+  "anomaly_id": "US-012",
+  "anomaly_type": "usage_spike",
+  "affected_pattern": "A cohort of customers shows 10x usage every first-hour-of-day for one week",
+  "root_cause": "Daily reset window double-counting \u2014 after a metering service restart, the daily-counter reset job ran at both 00:00 and 00:05 UTC for a week, flushing the daily accumulator twice and shifting the excess into the paid bucket at the hour boundary.",
+  "supporting_evidence": [
+    "Usage Spike RCA Playbook: Daily-Counter Reset Defect pattern",
+    "Reset-job log shows duplicate execution across 7 days",
+    "Spike confined to the 00:00\u201301:00 hour consistently"
+  ],
+  "recommended_action": [
+    "Remove the duplicate reset job and restore single 00:00 UTC schedule",
+    "Re-rate the week and refund the misattributed paid-bucket usage",
+    "Add a reset-job ledger so double executions are visible as metrics",
+    "Add a daily invariant test: accumulator resets exactly once per day"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

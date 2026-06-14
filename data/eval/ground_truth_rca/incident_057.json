@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_057",
+  "anomaly_id": "SB-009",
+  "anomaly_type": "sla_breach",
+  "affected_pattern": "Revenue-assurance leakage exceeds 0.5% contractual ceiling for two consecutive months",
+  "root_cause": "New rating pipeline introduced systematic leakage \u2014 a refactor of the rating pipeline silently dropped a specific event type ('supplementary service'), moving recognized revenue below the contractual leakage threshold.",
+  "supporting_evidence": [
+    "SLA Breach RCA Playbook: Revenue-Assurance Leakage Spike pattern",
+    "Event-type counter for supplementary-service is zero post-refactor",
+    "RA reconciliation shows expected-vs-actual delta above threshold"
+  ],
+  "recommended_action": [
+    "Restore the supplementary-service event path in rating",
+    "Backfill the missing charges with customer communication",
+    "Instrument per-event-type rating success rate dashboard",
+    "Require RA sign-off on any rating-pipeline refactor"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

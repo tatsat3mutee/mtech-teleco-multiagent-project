@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_056",
+  "anomaly_id": "SB-008",
+  "anomaly_type": "sla_breach",
+  "affected_pattern": "International roaming customers exceed contractual roaming-uplift cap",
+  "root_cause": "Regulatory cap not applied to inbound roamers \u2014 a new regulatory roaming cap was configured only for the outbound direction; inbound partner-served subscribers bypassed the cap and were charged full roaming rate.",
+  "supporting_evidence": [
+    "SLA Breach RCA Playbook: Roaming-Regulatory-Cap Scope Defect pattern",
+    "Regulatory bulletin references both inbound and outbound scope",
+    "Tariff config shows cap applied only to direction=outbound"
+  ],
+  "recommended_action": [
+    "Extend the regulatory cap to both directions in the tariff table",
+    "Rerate affected inbound roaming usage",
+    "Notify regulator proactively of the correction and refunds",
+    "Add a regulatory-compliance review gate to tariff changes"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

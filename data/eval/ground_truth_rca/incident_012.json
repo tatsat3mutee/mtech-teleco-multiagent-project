@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_012",
+  "anomaly_id": "ZB-012",
+  "anomaly_type": "zero_billing",
+  "affected_pattern": "Accounts whose certificate-based inter-service auth just expired show $0",
+  "root_cause": "Expired mTLS certificate between billing and provisioning services \u2014 rate-lookup calls began failing silently (caught exception \u2192 default=0.0) after the cert expired at midnight UTC, so rating defaulted to zero for all downstream lookups.",
+  "supporting_evidence": [
+    "Zero-Billing RCA Playbook: Inter-Service Auth Failure pattern",
+    "Expired cert CN=billing-to-provisioning with NotAfter matching failure window",
+    "Exception log 'SSLHandshakeException' with swallowed stack trace in RateLookupClient"
+  ],
+  "recommended_action": [
+    "Renew and rotate the inter-service certificate",
+    "Restart rating-engine instances to pick up the new cert",
+    "Replace silent exception catch with fail-closed behavior and explicit alert",
+    "Onboard the cert to the auto-renewal pipeline with 30-day expiry alerting"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

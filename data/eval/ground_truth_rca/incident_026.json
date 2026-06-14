@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_026",
+  "anomaly_id": "US-002",
+  "anomaly_type": "usage_spike",
+  "affected_pattern": "Monthly charges jumped to 10x normal but usage pattern shows continuous 24/7 data consumption",
+  "root_cause": "Device malware or malfunctioning application generating excessive background data usage. Customer's device has a rogue process consuming data continuously.",
+  "supporting_evidence": [
+    "Usage Spike RCA Playbook: Device Malware pattern",
+    "Continuous 24/7 usage pattern (not human-like burst pattern)",
+    "Data usage is upload-heavy (malware exfiltration indicator)"
+  ],
+  "recommended_action": [
+    "Advise customer on device security scan",
+    "Apply retroactive data cap if plan allows",
+    "Consider goodwill credit for device-related issue",
+    "Flag for customer outreach"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

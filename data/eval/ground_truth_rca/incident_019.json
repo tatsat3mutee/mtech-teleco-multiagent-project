@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_019",
+  "anomaly_id": "DC-007",
+  "anomaly_type": "duplicate_charge",
+  "affected_pattern": "Customers in multi-state regions see same usage charged twice under different jurisdictional tax lines",
+  "root_cause": "Tax engine double-levy \u2014 after the rollout of the new location-resolver, cross-state customers matched both origin and destination tax jurisdictions and the tax engine applied both levies instead of choosing the canonical one.",
+  "supporting_evidence": [
+    "Duplicate Charge RCA Playbook: Cross-Jurisdiction Double Tax pattern",
+    "Tax engine release notes for location-resolver v2 list this as a known edge case",
+    "Affected accounts all have origin_state != destination_state"
+  ],
+  "recommended_action": [
+    "Revert location-resolver to v1 or hotfix the jurisdiction-selection logic",
+    "Issue tax credit for the duplicate jurisdictional charges",
+    "Regulatory disclosure if required in the affected states",
+    "Add a jurisdiction-conflict test matrix covering 10 multi-state scenarios"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

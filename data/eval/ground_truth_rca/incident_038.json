@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_038",
+  "anomaly_id": "CF-002",
+  "anomaly_type": "cdr_failure",
+  "affected_pattern": "Batch of customer records with missing TotalCharges during peak traffic period",
+  "root_cause": "Data pipeline overflow during peak traffic \u2014 billing processing pipeline buffers overflowed during peak hours, causing billing records to be dropped and resulting in NULL billing fields.",
+  "supporting_evidence": [
+    "Billing Record Failure RCA Playbook: Data Pipeline Overflow pattern",
+    "Failures correlate with peak traffic hours (18:00-22:00)",
+    "Pipeline throughput metrics show capacity exceeded 120%"
+  ],
+  "recommended_action": [
+    "Increase billing pipeline buffer capacity",
+    "Implement backpressure mechanisms",
+    "Scale mediation infrastructure for peak traffic",
+    "Replay lost billing records from network element raw files"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

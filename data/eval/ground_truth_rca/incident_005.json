@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_005",
+  "anomaly_id": "ZB-005",
+  "anomaly_type": "zero_billing",
+  "affected_pattern": "Accounts with recently expired promotional bundles showing $0 on the bill after bundle end",
+  "root_cause": "Promotion expiry handler did not re-activate the base tariff \u2014 the offer-management microservice marked the promotion inactive but failed to publish a 'restore-base-tariff' event, leaving the billing catalog without any active rate plan.",
+  "supporting_evidence": [
+    "Zero-Billing RCA Playbook: Promotion Expiry Handler Defect pattern",
+    "Kafka topic offer-events has 'promotion.ended' without matching 'tariff.restored' events",
+    "Offer-management service release 2026.03.11 changed event emission order"
+  ],
+  "recommended_action": [
+    "Publish retroactive 'tariff.restored' events for all affected accounts",
+    "Reprocess the current billing cycle to apply base tariff charges",
+    "Hotfix offer-management service to emit both events atomically",
+    "Add a reconciliation job comparing offer-ended vs tariff-restored counts daily"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_030",
+  "anomaly_id": "US-006",
+  "anomaly_type": "usage_spike",
+  "affected_pattern": "Handover-heavy customers in high-mobility routes show 10x session counts",
+  "root_cause": "LTE-to-5G inter-RAT handover double-counting \u2014 the billing mediation layer counted both the LTE closeout billing record and the 5G startup billing record as separate billable sessions instead of stitching them, inflating session and volume counts.",
+  "supporting_evidence": [
+    "Usage Spike RCA Playbook: Handover Session-Stitching Defect pattern",
+    "telecom billing TS 32.298 section on session continuity flags referenced in engineering ticket",
+    "Spike magnitude correlates with customer mobility score from RAN analytics"
+  ],
+  "recommended_action": [
+    "Re-enable the session-continuity flag in the mediation config",
+    "Re-rate affected sessions by stitching paired billing records",
+    "Issue credits for the over-counted sessions",
+    "Add a cross-RAT continuity counter to the dashboard"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

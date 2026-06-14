@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_031",
+  "anomaly_id": "US-007",
+  "anomaly_type": "usage_spike",
+  "affected_pattern": "VPN-enabled business accounts show 10x data usage after a corporate client config push",
+  "root_cause": "VPN full-tunnel misconfiguration \u2014 a corporate MDM push set the VPN client to full-tunnel on cellular instead of split-tunnel, so all device traffic (including streaming and backup) now counts against the cellular plan.",
+  "supporting_evidence": [
+    "Usage Spike RCA Playbook: VPN Routing Misconfig pattern",
+    "Traffic mix shifted from previously application-scoped to all-HTTPS to one egress",
+    "Corporate client change ticket CORP-9912 rolled out the same day"
+  ],
+  "recommended_action": [
+    "Work with the corporate customer to revert to split-tunnel",
+    "Offer temporary data-cap relief while the rollback completes",
+    "Credit excess usage proportionally to the mis-configuration window",
+    "Add detection rule: sustained > 5x historical baseline + egress fan-in"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

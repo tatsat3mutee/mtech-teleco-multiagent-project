@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_023",
+  "anomaly_id": "DC-011",
+  "anomaly_type": "duplicate_charge",
+  "affected_pattern": "Recurring charges posted on both the 1st and the 2nd of the month for a subset of accounts",
+  "root_cause": "Scheduler retry without idempotency \u2014 the invoicing job failed at 23:59 on the 1st, was restarted at 00:01 on the 2nd by the watchdog, and both runs posted recurring charges since the idempotency key was derived from the run timestamp.",
+  "supporting_evidence": [
+    "Duplicate Charge RCA Playbook: Scheduler Retry Idempotency Defect pattern",
+    "Watchdog log shows job restart two minutes after failure",
+    "Idempotency key uses wall-clock date rather than logical billing date"
+  ],
+  "recommended_action": [
+    "Reverse the duplicate postings on the 2nd",
+    "Change idempotency key to (account_id, billing_cycle_id) deterministically",
+    "Make the invoicing job a pure function of inputs to allow safe retry",
+    "Add a post-run assertion that charge count == expected account count"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

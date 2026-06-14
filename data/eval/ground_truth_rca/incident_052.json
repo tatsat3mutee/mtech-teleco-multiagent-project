@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_052",
+  "anomaly_id": "SB-004",
+  "anomaly_type": "sla_breach",
+  "affected_pattern": "Enterprise MPLS customer's monthly charges exceed committed-spend floor despite availability breach",
+  "root_cause": "Availability SLA credit not auto-applied \u2014 availability dropped below 99.9% in two sites but the SLA-credit engine was waiting on a manual ticket that was never filed, so the customer was billed full with no credit offset.",
+  "supporting_evidence": [
+    "SLA Breach RCA Playbook: Availability-Credit Workflow Gap pattern",
+    "Network availability report shows 99.72% for the affected region",
+    "SLA credit engine input queue has zero entries for the month"
+  ],
+  "recommended_action": [
+    "Auto-ingest availability reports directly into the SLA credit engine",
+    "Issue retroactive SLA credits to all affected enterprise customers",
+    "Add alerting when SLA-credit queue depth is zero during a known outage",
+    "Run quarterly SLA-credit reconciliation with Finance"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

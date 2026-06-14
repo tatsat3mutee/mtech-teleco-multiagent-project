@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_013",
+  "anomaly_id": "DC-001",
+  "anomaly_type": "duplicate_charge",
+  "affected_pattern": "Customer billed twice for same monthly charges with identical timestamps",
+  "root_cause": "charge deduplication engine failure \u2014 the deduplication process was bypassed during a system restart, allowing duplicate billing records to pass through to the rating engine.",
+  "supporting_evidence": [
+    "Duplicate Charge RCA Playbook: billing record Deduplication Engine Failure pattern",
+    "IBM Telco Billing Operations Standards Section 4.3 (charge uniqueness) \u2014 billing record uniqueness requirements",
+    "System restart event logged 30 minutes before duplicate billing records appeared"
+  ],
+  "recommended_action": [
+    "Remove duplicate billing records from billing records",
+    "Issue refund/credit for overcharged amount",
+    "Restart and validate deduplication engine",
+    "Reprocess affected billing records"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

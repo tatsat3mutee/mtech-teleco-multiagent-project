@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_016",
+  "anomaly_id": "DC-004",
+  "anomaly_type": "duplicate_charge",
+  "affected_pattern": "Charges spike exactly 2x for a contiguous window of accounts processed after a Kafka consumer rebalance",
+  "root_cause": "Kafka consumer group rebalance replay \u2014 the rating consumer's offset commit was asynchronous and the rebalance replayed ~5 minutes of billing records, causing the same events to be charged twice.",
+  "supporting_evidence": [
+    "Duplicate Charge RCA Playbook: Kafka Replay on Rebalance pattern",
+    "Consumer lag chart shows spike and replay at rebalance timestamp",
+    "enable.auto.commit=true and commit interval exceeded processing latency"
+  ],
+  "recommended_action": [
+    "Switch rating consumer to synchronous commit after successful rating",
+    "Introduce idempotency key (billing record ID + billing_cycle) at the charge-insert step",
+    "Issue reversals for the duplicate charge window",
+    "Add consumer-lag-spike alert as an early signal"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

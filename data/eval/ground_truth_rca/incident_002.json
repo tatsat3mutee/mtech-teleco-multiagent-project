@@ -1,0 +1,19 @@
+{
+  "incident_id": "incident_002",
+  "anomaly_id": "ZB-002",
+  "anomaly_type": "zero_billing",
+  "affected_pattern": "Customer with active PhoneService and multiple streaming services showing $0 monthly charge",
+  "root_cause": "Provisioning system mismatch \u2014 customer was provisioned for services but billing system not updated. Service activation event did not propagate to billing platform.",
+  "supporting_evidence": [
+    "Provisioning-to-billing sync protocol documentation",
+    "Zero-Billing RCA Playbook: Provisioning System Mismatch pattern",
+    "CRM shows active services but billing system shows inactive"
+  ],
+  "recommended_action": [
+    "Resync provisioning system with billing platform",
+    "Issue corrective bill for missed billing cycles",
+    "Audit provisioning event queue for other stuck messages"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

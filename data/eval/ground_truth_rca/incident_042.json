@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_042",
+  "anomaly_id": "CF-006",
+  "anomaly_type": "cdr_failure",
+  "affected_pattern": "Cohort of enterprise customers shows missing TotalCharges after a DST transition",
+  "root_cause": "DST-driven timestamp rollback \u2014 during fall-back, billing records with timestamps within the repeated hour were deduplicated incorrectly by a time-based primary key, and the second occurrence was dropped as a 'duplicate'.",
+  "supporting_evidence": [
+    "Billing Record Failure RCA Playbook: DST-Ambiguous Timestamp pattern",
+    "Primary-key uniqueness violations in the mediation DB at 01:00 local",
+    "IBM Telco Billing Operations Standards Section on UTC-only timestamps cited as mitigation"
+  ],
+  "recommended_action": [
+    "Migrate billing record timestamps to UTC with a separate local-time field",
+    "Replay the ambiguous-hour billing records from the network element buffer",
+    "Rewrite the dedup key to include a monotonic sequence ID",
+    "Add a DST-transition dry-run to the bi-annual change calendar"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

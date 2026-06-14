@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_007",
+  "anomaly_id": "ZB-007",
+  "anomaly_type": "zero_billing",
+  "affected_pattern": "Enterprise accounts under consolidated billing show $0 for one of several child accounts",
+  "root_cause": "Hierarchy-resolver bug in consolidated billing \u2014 a parent account's charge-aggregation query skipped child accounts whose ledger had been touched by a pending credit note, leaving those children at $0 on the consolidated invoice.",
+  "supporting_evidence": [
+    "Zero-Billing RCA Playbook: Consolidated Billing Hierarchy Defect pattern",
+    "All affected child accounts have an open credit_note row with status=pending",
+    "SQL in consolidated-invoice job filters out rows where credit_note_pending IS NOT NULL"
+  ],
+  "recommended_action": [
+    "Regenerate consolidated invoices including the skipped children",
+    "Issue supplementary invoice for the missed charges",
+    "Fix the aggregation SQL to include pending credit notes as separate line items",
+    "Add a regression test covering parent-child with pending credits"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_029",
+  "anomaly_id": "US-005",
+  "anomaly_type": "usage_spike",
+  "affected_pattern": "Customer usage 10x normal correlates with a video streaming app update date",
+  "root_cause": "Streaming app default changed to ultra-HD \u2014 a popular streaming app pushed an update that defaulted to 4K streaming on cellular, multiplying data usage for all its users on the mobile network.",
+  "supporting_evidence": [
+    "Usage Spike RCA Playbook: Streaming-App Default Bitrate Change pattern",
+    "User-agent on high-usage sessions matches the app update version",
+    "Public release notes confirm the default-4K change"
+  ],
+  "recommended_action": [
+    "Customer-facing advisory with instructions to change app settings",
+    "Offer one-time goodwill credit and a data-booster option",
+    "Engage the streaming partner about lowering cellular default bitrate",
+    "Add traffic-classification telemetry so future partner-driven shifts are detected faster"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

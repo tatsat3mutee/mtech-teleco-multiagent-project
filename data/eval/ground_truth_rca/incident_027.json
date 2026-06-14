@@ -1,0 +1,21 @@
+{
+  "incident_id": "incident_027",
+  "anomaly_id": "US-003",
+  "anomaly_type": "usage_spike",
+  "affected_pattern": "Multiple customers on same plan showing exactly 10x usage spike simultaneously",
+  "root_cause": "Rating engine metering error \u2014 a bug in the rating engine multiplied usage quantities by an incorrect factor (10x) for all customers on the affected plan.",
+  "supporting_evidence": [
+    "Usage Spike RCA Playbook: Metering/Rating Error pattern",
+    "Multiple customers on same plan affected simultaneously",
+    "Spike is exactly 10x normal (round multiplier)",
+    "Recent rating engine configuration change identified"
+  ],
+  "recommended_action": [
+    "Correct rating engine calculation logic",
+    "Reprocess all affected billing records with correct metering",
+    "Issue corrective billing for all affected customers",
+    "Implement rating accuracy regression tests"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

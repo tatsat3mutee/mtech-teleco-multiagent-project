@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_037",
+  "anomaly_id": "CF-001",
+  "anomaly_type": "cdr_failure",
+  "affected_pattern": "Customer billing record has NULL TotalCharges indicating billing record processing failure",
+  "root_cause": "billing record format mismatch after network element upgrade \u2014 the billing record format changed but the mediation system was not updated, causing field parsing failures and NULL values in billing records.",
+  "supporting_evidence": [
+    "Billing Record Failure RCA Playbook: Format Mismatch After Network Upgrade pattern",
+    "Network upgrade event logged 24 hours before failures started",
+    "billing record rejection logs show format-specific parsing errors"
+  ],
+  "recommended_action": [
+    "Update billing billing mediation layer billing record parsing rules for new format",
+    "Reprocess all rejected billing records since the network upgrade",
+    "Validate end-to-end billing record processing after fix",
+    "Add format validation to pre-upgrade checklist"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

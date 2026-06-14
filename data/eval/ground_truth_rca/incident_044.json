@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_044",
+  "anomaly_id": "CF-008",
+  "anomaly_type": "cdr_failure",
+  "affected_pattern": "TotalCharges NULL specifically for GGSN-originated traffic after certificate rotation",
+  "root_cause": "Diameter interface certificate mis-rotation \u2014 the new cert on the charging gateway had an incorrect SAN, causing Diameter-CCR requests to fail TLS handshake and the gateway to drop usage events silently.",
+  "supporting_evidence": [
+    "Billing Record Failure RCA Playbook: Diameter mTLS Rotation Defect pattern",
+    "Charging gateway tls-error counter spiked at rotation time",
+    "Cert SAN differs from the peer's verify list"
+  ],
+  "recommended_action": [
+    "Reissue the certificate with correct SANs and redeploy",
+    "Replay the dropped CCR events from gateway cache",
+    "Gate future cert rotations behind a peer-handshake smoke test",
+    "Alert on Diameter tls-error-rate > 0"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

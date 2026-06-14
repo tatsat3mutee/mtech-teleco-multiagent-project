@@ -1,0 +1,19 @@
+{
+  "incident_id": "incident_015",
+  "anomaly_id": "DC-003",
+  "anomaly_type": "duplicate_charge",
+  "affected_pattern": "Enterprise customer with bundled services billed by two different billing subsystems",
+  "root_cause": "Cross-system synchronization failure \u2014 voice and data billing systems both processed the same usage events for a bundled service plan, resulting in double billing.",
+  "supporting_evidence": [
+    "Duplicate Charge RCA Playbook: Cross-System Synchronization Failure pattern",
+    "Charges from two different billing system IDs for same usage",
+    "Recent change to billing system orchestration routing rules"
+  ],
+  "recommended_action": [
+    "Fix routing rules to prevent cross-system duplicate processing",
+    "Reconcile and reverse duplicate charges",
+    "Strengthen inter-system deduplication checks"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

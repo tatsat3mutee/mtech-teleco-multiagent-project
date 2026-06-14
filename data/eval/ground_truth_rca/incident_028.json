@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_028",
+  "anomaly_id": "US-004",
+  "anomaly_type": "usage_spike",
+  "affected_pattern": "IoT-tier accounts show a sudden sustained 10x data usage during off-peak hours",
+  "root_cause": "Runaway IoT device firmware loop \u2014 a firmware update pushed to a class of connected sensors introduced a retry loop that continuously re-established data sessions, each generating a full handshake plus payload.",
+  "supporting_evidence": [
+    "Usage Spike RCA Playbook: Runaway IoT Firmware pattern",
+    "All affected devices share the same firmware version deployed last week",
+    "billing record duration distribution bimodal: short handshakes repeated at millisecond interval"
+  ],
+  "recommended_action": [
+    "Coordinate with IoT partner to roll back the firmware",
+    "Apply emergency data cap on the affected device SKUs",
+    "Credit the excess usage under IoT-partner SLA",
+    "Add a pre-deployment traffic shaping test for firmware updates"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_024",
+  "anomaly_id": "DC-012",
+  "anomaly_type": "duplicate_charge",
+  "affected_pattern": "Customer reports seeing the same $ amount posted at the same timestamp on two line items under different SKUs",
+  "root_cause": "Catalog SKU duplication \u2014 a catalog refresh introduced a shadow SKU that pointed to the same rating rule, causing the product catalog join to emit two rows per service, each charged separately.",
+  "supporting_evidence": [
+    "Duplicate Charge RCA Playbook: Catalog Shadow-SKU pattern",
+    "Catalog table shows two SKUs with identical rating_rule_id",
+    "Catalog refresh ticket CAT-2031 introduced the shadow SKU 14 days ago"
+  ],
+  "recommended_action": [
+    "Deactivate the shadow SKU in the catalog",
+    "Reverse the duplicate SKU charges and consolidate to a single line item",
+    "Add a unique constraint (rating_rule_id) on the SKU table",
+    "Automate catalog refresh diff-review before publishing to production"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_048",
+  "anomaly_id": "CF-012",
+  "anomaly_type": "cdr_failure",
+  "affected_pattern": "Sporadic NULL TotalCharges accompanied by mediation-layer parse warnings about unexpected field types",
+  "root_cause": "Network element vendor pushed an optional billing record field as integer instead of string \u2014 mediation's lax parser accepted the event but emitted the amount field as NULL when the downstream rating lookup failed.",
+  "supporting_evidence": [
+    "Billing Record Failure RCA Playbook: Vendor-Optional-Field Type Drift pattern",
+    "Vendor release notes show field type change for optional attribute",
+    "Mediation parse-warning counter correlates exactly with NULL record count"
+  ],
+  "recommended_action": [
+    "Update the mediation parser to coerce the field back to string",
+    "Replay the affected billing records through the fixed parser",
+    "Make the parser strict mode the default and quarantine type-drift events",
+    "Require vendors to announce billing record-schema changes via a contract test"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

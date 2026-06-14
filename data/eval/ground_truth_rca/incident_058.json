@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_058",
+  "anomaly_id": "SB-010",
+  "anomaly_type": "sla_breach",
+  "affected_pattern": "Complaint-response-time SLA missed for 20% of enterprise tickets",
+  "root_cause": "Ticket routing regression \u2014 a CRM upgrade mis-routed enterprise tickets to the consumer queue, adding hours of triage latency and breaching the 4-hour enterprise response SLA.",
+  "supporting_evidence": [
+    "SLA Breach RCA Playbook: Enterprise-Ticket Misroute pattern",
+    "Ticket queue distribution shifted 20% toward consumer after upgrade",
+    "Customer segment tag stripped by the upgrade's normalizer"
+  ],
+  "recommended_action": [
+    "Restore the customer-segment tag retention in the CRM normalizer",
+    "Issue SLA credits per contract for each breached ticket",
+    "Retroactively re-route open enterprise tickets to the correct queue",
+    "Add an integration test asserting segment preservation end-to-end"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

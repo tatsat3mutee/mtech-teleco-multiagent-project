@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_025",
+  "anomaly_id": "US-001",
+  "anomaly_type": "usage_spike",
+  "affected_pattern": "Customer data usage increased 10x overnight with charges far above historical baseline",
+  "root_cause": "Potential fraudulent SIM cloning or account compromise \u2014 unauthorized usage detected from geographic locations inconsistent with customer's profile.",
+  "supporting_evidence": [
+    "Usage Spike RCA Playbook: Fraudulent SIM Cloning pattern",
+    "Usage from two different geographic locations simultaneously",
+    "Customer profile shows no travel history"
+  ],
+  "recommended_action": [
+    "Immediately suspend account for security investigation",
+    "Issue replacement SIM to customer",
+    "Reverse fraudulent charges",
+    "File fraud report with security team"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_008",
+  "anomaly_id": "ZB-008",
+  "anomaly_type": "zero_billing",
+  "affected_pattern": "Recently activated accounts all show $0 for their first full billing cycle",
+  "root_cause": "First-bill proration defect \u2014 a flag meant to zero the pro-rata partial cycle was incorrectly applied to the first full cycle as well, leading to $0 bills for newly onboarded accounts.",
+  "supporting_evidence": [
+    "Zero-Billing RCA Playbook: First-Bill Proration Flag Misapplied pattern",
+    "Proration-flag code path introduced in release billing-engine 4.7",
+    "All affected customers have activation_date within last 35 days"
+  ],
+  "recommended_action": [
+    "Recompute first full cycle charges for all newly onboarded accounts",
+    "Issue corrective invoice with clear customer communication",
+    "Patch billing-engine to apply proration flag only to partial-cycle charges",
+    "Add unit test covering partial vs full-cycle proration branches"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

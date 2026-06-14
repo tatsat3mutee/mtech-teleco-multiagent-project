@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_039",
+  "anomaly_id": "CF-003",
+  "anomaly_type": "cdr_failure",
+  "affected_pattern": "Scattered NULL fields across multiple customer records with no clear time pattern",
+  "root_cause": "Database storage failure \u2014 the billing record storage database experienced intermittent connection pool exhaustion, preventing random billing records from being fully persisted.",
+  "supporting_evidence": [
+    "Billing Record Failure RCA Playbook: Database Storage Failure pattern",
+    "Database connection pool exhaustion errors in system logs",
+    "Random pattern of failures (not correlated with time or customer segment)"
+  ],
+  "recommended_action": [
+    "Expand database connection pool size",
+    "Implement connection pool monitoring and alerting",
+    "Replay lost billing records from billing billing mediation layer buffer",
+    "Verify database health and storage capacity"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_004",
+  "anomaly_id": "ZB-004",
+  "anomaly_type": "zero_billing",
+  "affected_pattern": "Postpaid customers converted from prepaid in the last 30 days showing $0 MonthlyCharges",
+  "root_cause": "Prepaid-to-postpaid conversion workflow failure \u2014 subscriber profile was migrated in the CRM but the recurring charge schedule was never activated in the billing catalog, leaving the account in a zero-recurring state.",
+  "supporting_evidence": [
+    "Zero-Billing RCA Playbook: Plan Conversion Workflow Gap pattern",
+    "Conversion timestamp in CRM precedes absence of recurring charge record in billing DB",
+    "Ops change ticket CHG-48213 for conversion workflow deployed 32 days ago"
+  ],
+  "recommended_action": [
+    "Re-trigger recurring charge activation for all conversions in the last 30 days",
+    "Back-bill customers from their conversion date per regulatory grace window",
+    "Add post-conversion validation step to the workflow DAG",
+    "File customer notification before back-billing to comply with consumer protection rules"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

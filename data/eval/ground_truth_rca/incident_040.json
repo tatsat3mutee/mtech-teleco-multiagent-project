@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_040",
+  "anomaly_id": "CF-004",
+  "anomaly_type": "cdr_failure",
+  "affected_pattern": "Burst of NULL TotalCharges aligned to the 02:00\u201303:00 UTC window",
+  "root_cause": "SIGTRAN link flap on the mediation interconnect \u2014 a brief loss of signaling caused the billing mediation layer to drop billing records for which the correlation lookup failed, yielding NULL rated amounts.",
+  "supporting_evidence": [
+    "Billing Record Failure RCA Playbook: SIGTRAN Interconnect Flap pattern",
+    "Interconnect monitoring shows link-down events in the exact window",
+    "Correlated ticket from carrier partner about M3UA instability"
+  ],
+  "recommended_action": [
+    "Replay billing records from the upstream network element buffer",
+    "Engage carrier partner to stabilize the SIGTRAN interconnect",
+    "Add link-flap-driven replay automation",
+    "Monitor M3UA link state with pager-level alerting"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_033",
+  "anomaly_id": "US-009",
+  "anomaly_type": "usage_spike",
+  "affected_pattern": "High-tier 5G customers show 10x volumetric usage same day as network capacity upgrade",
+  "root_cause": "5G speed uplift without plan uplift \u2014 a RAN software upgrade increased peak throughput, and customers on flat-rate-with-soft-cap plans consumed proportionally more, pushing them past cap into premium rates.",
+  "supporting_evidence": [
+    "Usage Spike RCA Playbook: Speed-Uplift-Without-Plan-Alignment pattern",
+    "RAN config note confirms peak throughput cap raised from 200 to 1000 Mbps",
+    "Spike magnitude correlates with customer device 5G capability"
+  ],
+  "recommended_action": [
+    "Retroactively raise the soft cap for the upgrade month",
+    "Offer cap-upgrade migration path to affected customers",
+    "Align network-upgrade and plan-upgrade change management going forward",
+    "Add a pre-upgrade billing-impact assessment to RAN change process"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}

@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_043",
+  "anomaly_id": "CF-007",
+  "anomaly_type": "cdr_failure",
+  "affected_pattern": "Widespread NULL TotalCharges across the region served by mediation cluster 3",
+  "root_cause": "Kafka broker disk-full on the billing record-ingest cluster \u2014 producer writes began failing silently because acks=1 with retries=0 dropped messages; the NULLs propagated downstream with no raised error.",
+  "supporting_evidence": [
+    "Billing Record Failure RCA Playbook: Kafka Disk-Full Silent Drop pattern",
+    "Broker disk-usage crossed 100% 10 minutes before the loss window",
+    "Producer config acks=1 retries=0 captured in runtime config dump"
+  ],
+  "recommended_action": [
+    "Grow disk / prune retention on the affected broker",
+    "Change producer to acks=all retries=10 with idempotent producer",
+    "Replay from upstream raw billing record archive",
+    "Alert on broker disk-usage > 80% with auto-scale runbook"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

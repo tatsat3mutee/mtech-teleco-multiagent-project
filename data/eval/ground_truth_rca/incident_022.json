@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_022",
+  "anomaly_id": "DC-010",
+  "anomaly_type": "duplicate_charge",
+  "affected_pattern": "Enterprise customers with long-running sessions see intermediate and final billing records both rated as full sessions",
+  "root_cause": "Interim billing record semantics lost in new rating pipeline \u2014 the refactored pipeline stopped correlating interim (S-billing record) and final (F-billing record) billing records by session-ID, treating each as a standalone billable session instead of aggregating.",
+  "supporting_evidence": [
+    "Duplicate Charge RCA Playbook: Interim/Final billing record Correlation Defect pattern",
+    "telecom billing TS 32.298 section on S-billing record and F-billing record semantics cites this as a known hazard",
+    "Pipeline rewrite removed the session-ID correlation index"
+  ],
+  "recommended_action": [
+    "Re-introduce session-ID correlation and aggregation in the rating pipeline",
+    "Re-rate long sessions in the affected window and adjust charges",
+    "Issue credit for double-counted session minutes",
+    "Contract test the pipeline against a synthetic session spanning 3 interim and 1 final billing record"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

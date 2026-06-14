@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_050",
+  "anomaly_id": "SB-002",
+  "anomaly_type": "sla_breach",
+  "affected_pattern": "Customer charges spiked after plan migration with charges at default uncapped rates",
+  "root_cause": "Plan migration error \u2014 during plan upgrade, old plan billing rules were deactivated before new plan rules were fully configured, resulting in default (uncapped) billing rates.",
+  "supporting_evidence": [
+    "SLA Breach RCA Playbook: Plan Migration Error pattern",
+    "Plan change event logged 5 days before charges spiked",
+    "Billing applied default/fallback rates instead of new plan rates"
+  ],
+  "recommended_action": [
+    "Apply correct plan rules retroactively from migration date",
+    "Refund excess charges above new plan rates",
+    "Fix plan migration workflow to prevent future gaps",
+    "Audit all recent plan migrations for similar issues"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

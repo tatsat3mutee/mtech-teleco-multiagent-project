@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_009",
+  "anomaly_id": "ZB-009",
+  "anomaly_type": "zero_billing",
+  "affected_pattern": "Accounts whose tenure just crossed a loyalty-tier threshold show zero recurring charges",
+  "root_cause": "Loyalty-tier discount misconfiguration \u2014 a newly introduced 'platinum' tier discount was configured as 100% (intended 10%), applying a full waiver instead of a partial credit to all customers who just qualified.",
+  "supporting_evidence": [
+    "Zero-Billing RCA Playbook: Discount Config Off-By-Factor pattern",
+    "Discount row loyalty_tier=platinum has value=1.00 in the pricing table",
+    "Change ticket CHG-51204 deployed the tier two weeks ago"
+  ],
+  "recommended_action": [
+    "Correct the discount value from 1.00 to 0.10 in the pricing table",
+    "Rerate affected cycles and issue differential invoices",
+    "Add a schema constraint CHECK (discount_value BETWEEN 0 AND 0.99)",
+    "Require two-person review for pricing-table changes going forward"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

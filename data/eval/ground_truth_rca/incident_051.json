@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_051",
+  "anomaly_id": "SB-003",
+  "anomaly_type": "sla_breach",
+  "affected_pattern": "Charges exceed plan limits due to previously included usage now classified as premium",
+  "root_cause": "Usage type reclassification \u2014 a change in usage classification rules caused previously included usage to be reclassified as out-of-plan premium usage, incurring additional charges.",
+  "supporting_evidence": [
+    "SLA Breach RCA Playbook: Usage Type Reclassification pattern",
+    "Classification rule change logged 2 weeks before SLA breach",
+    "Multiple customers on similar plans affected"
+  ],
+  "recommended_action": [
+    "Revert incorrect usage classification",
+    "Reprocess bills for all affected customers",
+    "Issue credits for incorrectly classified usage charges",
+    "Implement classification change impact analysis before deployment"
+  ],
+  "severity": "HIGH",
+  "source_dataset": "ibm_telco"
+}

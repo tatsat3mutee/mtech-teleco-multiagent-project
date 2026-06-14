@@ -1,0 +1,20 @@
+{
+  "incident_id": "incident_018",
+  "anomaly_id": "DC-006",
+  "anomaly_type": "duplicate_charge",
+  "affected_pattern": "A reversal posted but the original charge was not voided, leading to a net-neutral ledger but a doubled invoice amount",
+  "root_cause": "Refund-without-void accounting bug \u2014 the CSR-initiated refund created an opposing entry rather than voiding the original, which the invoice-generator summed as two separate positive charges in the 'charges' column while netting to zero in the ledger.",
+  "supporting_evidence": [
+    "Duplicate Charge RCA Playbook: Refund-Without-Void pattern",
+    "Invoice line items show original + reversal as two positive entries",
+    "Accounting ledger nets to zero but customer-visible invoice does not"
+  ],
+  "recommended_action": [
+    "Void the original charge and remove the opposing reversal from invoice view",
+    "Regenerate and resend affected invoices with apology communication",
+    "Change refund workflow to issue a void for same-cycle cancellations",
+    "Add invoice invariant: no two same-amount charges within 60 seconds"
+  ],
+  "severity": "MEDIUM",
+  "source_dataset": "ibm_telco"
+}
