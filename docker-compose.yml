@@ -1,0 +1,127 @@
+version: "3.9"
+
+services:
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rca_streamlit
+    ports:
+      - "8501:8501"
+    volumes:
+      - chroma_data:/app/chroma_db
+      - mlflow_data:/app/mlruns
+      - ./data:/app/data
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - REDIS_URL=redis://redis:6379/0
+    depends_on: [mlflow, redis]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+    networks:
+      - rca_net
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rca_api
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/app/chroma_db
+      - mlflow_data:/app/mlruns
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - REDIS_URL=redis://redis:6379/0
+    depends_on: [mlflow, redis]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "0.5"
+    networks:
+      - rca_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: rca_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --save 60 1 --loglevel warning
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.25"
+    networks:
+      - rca_net
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.11.1
+    container_name: rca_mlflow
+    command: >
+      mlflow server
+        --host 0.0.0.0
+        --port 5000
+        --backend-store-uri sqlite:///mlruns/mlflow.db
+        --default-artifact-root /mlruns/artifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlruns
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.25"
+    networks:
+      - rca_net
+
+volumes:
+  chroma_data:
+  mlflow_data:
+  redis_data:
+
+networks:
+  rca_net:
+    driver: bridge

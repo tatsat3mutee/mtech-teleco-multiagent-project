@@ -1,0 +1,91 @@
+name: CD — Deploy
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "*.txt"
+
+jobs:
+  # ── Option A: VPS SSH deploy (set VPS_HOST, VPS_USER, VPS_SSH_KEY secrets) ──
+  deploy-vps:
+    runs-on: ubuntu-latest
+    if: |
+      github.ref == 'refs/heads/main' &&
+      vars.DEPLOY_TARGET == 'vps'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          script: |
+            cd /opt/rca-platform
+            git pull origin main
+            docker compose pull
+            docker compose up -d --build
+            docker compose ps
+            echo "Deployment complete"
+
+  # ── Option B: Render.com webhook deploy (set RENDER_API_KEY + RENDER_SERVICE_ID) ──
+  deploy-render:
+    runs-on: ubuntu-latest
+    if: |
+      github.ref == 'refs/heads/main' &&
+      vars.DEPLOY_TARGET == 'render'
+    environment: production
+
+    steps:
+      - name: Trigger Render deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          curl -f -X POST \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache":"do_not_clear"}'
+          echo "Deploy triggered on Render"
+
+  # ── Option C: Railway deploy (set RAILWAY_TOKEN + RAILWAY_SERVICE_ID secrets) ──
+  deploy-railway:
+    runs-on: ubuntu-latest
+    if: |
+      github.ref == 'refs/heads/main' &&
+      vars.DEPLOY_TARGET == 'railway'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway up --service ${{ secrets.RAILWAY_SERVICE_ID }} --detach
+          echo "Deploy triggered on Railway — check https://railway.app for status"
+
+  # ── Streamlit Community Cloud deploys automatically on push to main ──
+  # No workflow step needed — connect the repo in share.streamlit.io settings.
+  # This job just confirms the push succeeded.
+  notify-streamlit:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Confirm push to main
+        run: |
+          echo "Pushed to main — Streamlit Community Cloud will auto-deploy."
+          echo "Dashboard: https://share.streamlit.io (connect repo if not already done)"
