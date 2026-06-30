@@ -1,114 +1,107 @@
 """
-Generate Synthetic Enterprise Billing Dataset (SEBD).
-Takes an internal billing CSV, removes all real identifiers, renames fields.
-Run once: python scripts/generate_sebd.py --input <path> --output data/raw/sebd.csv
-Output CSV is safe to commit. Source CSV must never be committed.
+Generate the Synthetic Enterprise Billing Dataset (SEBD).
+
+SEBD is a fully synthetic dataset modeled on a *generic* enterprise-billing
+schema (transactions, accounts, service SKUs, segments, fault codes). It uses
+no production data and contains no real identifiers — every value is generated
+from a seeded RNG, so the output is deterministic and safe to commit.
+
+Run once:
+    python scripts/generate_sebd.py --output data/raw/sebd.csv --rows 54000
 """
 import argparse
-import pandas as pd
-import numpy as np
 from pathlib import Path
 
-
-FIELD_RENAME = {
-    "BGW_RECORD_ID":        "TXN_ID",
-    "ENTERPRISE":           "ACC_CODE",
-    "HVS_LICENSE":          "SVC_SKU",
-    "SUBACCOUNT":           "SUB_ACCOUNT_ID",
-    "LICENSE_COUNT":        "UNIT_COUNT",
-    "LICENSE_COUNT_DETAIL": "BILLABLE_UNIT_COUNT",
-    "BILLING_ACTIVE":       "ACCOUNT_ACTIVE",
-    "DEVICE_BILLING_TYPE":  "SUBSCRIPTION_STATE",
-    "ENTERPRISE_GROUP":     "SEGMENT",
-    "STATUS":               "PROC_STATUS",
-    "ERROR_DESCRIPTION":    "FAULT_CODE",
-    "COMPARE_COUNT":        "PREV_UNIT_COUNT",
-    "COMPARE_DATE":         "PREV_BILLING_DATE",
-    "SOURCE":               "INPUT_SOURCE",
-    "UNIQUE_ID":            "SERVICE_KEY",
-    "RATE":                 "BILLING_RATE",
-    "ENCRYPTED":            "DATA_FLAG",
-    "XML_GROUP":            "CONFIG_GROUP",
-}
-
-FAULT_CODE_RENAME = {
-    "LicenseEmptyOrE911":               "UNIT_EMPTY_FAULT",
-    "BillingActiveNotTrue":             "INACTIVE_ACCT_FAULT",
-    "EnterpriseGroupIsNotApplicable":   "SEGMENT_ROUTING_FAULT",
-    "PBI_NOT_FOUND":                    "SKU_MISSING_FAULT",
-    "0005-Sub Account is inactive":     "SUBACCT_INACTIVE_FAULT",
-    "0006-Sub Account type is invalid": "SUBACCT_TYPE_FAULT",
-}
-
-SEGMENT_RENAME = {
-    "MASS MARKET/FILTER": "SEGMENT_A",
-    "MASS MARKET":        "SEGMENT_B",
-    "CALNET":             "SEGMENT_C",
-    "CANCELLED":          "SEGMENT_D",
-    "FLORIDA":            "SEGMENT_E",
-    "MASS MARKET/EGW":    "SEGMENT_F",
-    "MASS MARKET/CUSTOM": "SEGMENT_G",
-    "HVS LITE":           "SEGMENT_H",
-    "FED/GOV":            "SEGMENT_I",
-}
+import numpy as np
+import pandas as pd
 
 
-def anonymise(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
+# Neutral, generic billing schema — no proprietary names.
+SEGMENTS = [f"SEGMENT_{c}" for c in "ABCDEFGHI"]
+
+FAULT_CODES = [
+    "UNIT_EMPTY_FAULT",
+    "INACTIVE_ACCT_FAULT",
+    "SEGMENT_ROUTING_FAULT",
+    "SKU_MISSING_FAULT",
+    "SUBACCT_INACTIVE_FAULT",
+    "SUBACCT_TYPE_FAULT",
+]
+
+PROC_STATUS = ["PROCESSED", "PENDING", "FAILED", "RETRIED"]
+INPUT_SOURCES = ["BATCH", "STREAM", "MANUAL"]
+SUBSCRIPTION_STATES = ["ACTIVE", "SUSPENDED", "CANCELLED", "TRIAL"]
+
+
+def generate(rows: int = 54000, seed: int = 42) -> pd.DataFrame:
+    """Build a synthetic enterprise-billing table with a realistic schema."""
     rng = np.random.default_rng(seed)
 
-    df = df.rename(columns=FIELD_RENAME)
+    n_accounts = max(1, rows // 60)
+    n_skus = max(1, rows // 300)
+    n_subaccounts = max(1, rows // 6)
 
-    if "ACC_CODE" in df.columns:
-        enterprises = df["ACC_CODE"].dropna().unique()
-        enc_map = {e: f"ACC-{i:04d}" for i, e in enumerate(sorted(enterprises))}
-        df["ACC_CODE"] = df["ACC_CODE"].map(enc_map)
+    acc_codes = np.array([f"ACC-{i:04d}" for i in range(n_accounts)])
+    skus = np.array([f"SKU-{i:04d}" for i in range(n_skus)])
+    sub_accounts = np.array([f"SUB-{i:06d}" for i in range(n_subaccounts)])
 
-    if "SVC_SKU" in df.columns:
-        skus = df["SVC_SKU"].dropna().unique()
-        sku_map = {s: f"SKU-{i:04d}" for i, s in enumerate(sorted(skus))}
-        df["SVC_SKU"] = df["SVC_SKU"].map(sku_map)
+    unit_count = rng.integers(1, 500, size=rows)
+    # Most billable units track unit_count; a minority diverge (billing faults).
+    drift = rng.normal(0, 5, size=rows).astype(int)
+    billable_unit_count = np.clip(unit_count + drift, 0, None)
 
-    if "SUB_ACCOUNT_ID" in df.columns:
-        subs = df["SUB_ACCOUNT_ID"].dropna().unique()
-        sub_map = {s: f"SUB-{i:06d}" for i, s in enumerate(sorted(subs))}
-        df["SUB_ACCOUNT_ID"] = df["SUB_ACCOUNT_ID"].map(sub_map)
+    prev_unit_count = np.clip(
+        unit_count + rng.normal(0, 8, size=rows).astype(int), 0, None
+    )
 
-    if "SERVICE_KEY" in df.columns:
-        df["SERVICE_KEY"] = df["SERVICE_KEY"].apply(
-            lambda x: "+".join([f"ANON{i:04d}" for i in range(len(str(x).split("+")))]) if pd.notna(x) else x
-        )
+    start = np.datetime64("2025-01-01")
+    billing_date = start + rng.integers(0, 365, size=rows).astype("timedelta64[D]")
+    prev_billing_date = billing_date - np.timedelta64(30, "D")
 
-    if "FAULT_CODE" in df.columns:
-        df["FAULT_CODE"] = df["FAULT_CODE"].map(
-            lambda x: FAULT_CODE_RENAME.get(x, x) if pd.notna(x) else x
-        )
+    account_active = rng.choice([True, False], size=rows, p=[0.92, 0.08])
+    # Faults appear on a minority of records; rest are clean (None fault).
+    has_fault = rng.random(rows) < 0.12
+    fault = np.where(has_fault, rng.choice(FAULT_CODES, size=rows), None)
 
-    if "SEGMENT" in df.columns:
-        df["SEGMENT"] = df["SEGMENT"].map(
-            lambda x: SEGMENT_RENAME.get(x, "SEGMENT_OTHER") if pd.notna(x) else x
-        )
-
-    df["TXN_ID"] = range(1, len(df) + 1)
+    df = pd.DataFrame(
+        {
+            "TXN_ID": np.arange(1, rows + 1),
+            "ACC_CODE": rng.choice(acc_codes, size=rows),
+            "SVC_SKU": rng.choice(skus, size=rows),
+            "SUB_ACCOUNT_ID": rng.choice(sub_accounts, size=rows),
+            "UNIT_COUNT": unit_count,
+            "BILLABLE_UNIT_COUNT": billable_unit_count,
+            "ACCOUNT_ACTIVE": account_active,
+            "SUBSCRIPTION_STATE": rng.choice(SUBSCRIPTION_STATES, size=rows),
+            "SEGMENT": rng.choice(SEGMENTS, size=rows),
+            "PROC_STATUS": rng.choice(PROC_STATUS, size=rows, p=[0.8, 0.1, 0.07, 0.03]),
+            "FAULT_CODE": fault,
+            "PREV_UNIT_COUNT": prev_unit_count,
+            "PREV_BILLING_DATE": prev_billing_date,
+            "BILLING_DATE": billing_date,
+            "INPUT_SOURCE": rng.choice(INPUT_SOURCES, size=rows),
+            "BILLING_RATE": np.round(rng.uniform(0.5, 25.0, size=rows), 2),
+            "CONFIG_GROUP": rng.integers(1, 20, size=rows),
+        }
+    )
 
     return df
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Anonymise internal billing CSV → SEBD")
-    parser.add_argument("--input",  required=True, help="Path to internal billing CSV")
+    parser = argparse.ArgumentParser(
+        description="Generate the synthetic enterprise-billing dataset (SEBD)"
+    )
     parser.add_argument("--output", default="data/raw/sebd.csv")
-    parser.add_argument("--seed",   type=int, default=42)
+    parser.add_argument("--rows", type=int, default=54000)
+    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
-    print(f"Loading {args.input}...")
-    df = pd.read_csv(args.input)
-    print(f"Loaded {len(df)} records, {len(df.columns)} columns")
-
-    df_anon = anonymise(df, seed=args.seed)
+    df = generate(rows=args.rows, seed=args.seed)
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-    df_anon.to_csv(args.output, index=False)
-    print(f"SEBD saved to {args.output} ({len(df_anon)} records)")
-    print("Safe to commit. No real identifiers remain.")
+    df.to_csv(args.output, index=False)
+    print(f"SEBD saved to {args.output} ({len(df)} records, {len(df.columns)} columns)")
+    print("Fully synthetic. No real identifiers, no production data.")
 
 
 if __name__ == "__main__":
