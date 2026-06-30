@@ -248,7 +248,7 @@ corresponding dissertation chapters in [diagrams/README.md](diagrams/README.md).
 |---|---|---|
 | IBM Telco Customer Churn | 7,043 | Primary feature source for anomaly detection |
 | Maven Telecom Churn | 7,043 | Secondary distribution for cross-validation |
-| SEBD (Synthetic Enterprise Billing) | 54,000 | Realistic billing schema (fault codes, segments), anonymised |
+| SEBD (Synthetic Enterprise Billing) | 54,000 | Generic billing schema (fault codes, segments), fully generated |
 
 Because no labelled production anomalies are available, five controlled anomaly
 classes — zero-billing, duplicate charge, usage spike, CDR failure, and SLA breach —
@@ -265,9 +265,9 @@ bound the claims the evaluation can make:
   qualified accordingly.
 - The IBM Telco features are churn features and serve as a proxy for production
   billing KPIs.
-- The SEBD dataset is synthesised from a real billing schema; the underlying
-  production file is confidential and is never included in the repository. The system
-  runs fully on the public datasets alone.
+- The SEBD dataset is fully synthetic, generated to mirror a generic enterprise-billing
+  schema; no production data or real identifiers are used. The system also runs fully on
+  the public datasets alone.
 
 ## 7. Planned Evaluation Methodology
 

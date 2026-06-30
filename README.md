@@ -43,33 +43,36 @@ backed by hybrid RAG (BM25 + dense + GraphRAG) and a critic/refinement loop.
 |---------|---------|--------|-----|
 | **IBM Telco Customer Churn** | 7,043 | [Kaggle](https://www.kaggle.com/datasets/blastchar/telco-customer-churn) | Primary billing anomaly detection — fields: tenure, MonthlyCharges, TotalCharges, Contract, InternetService |
 | **Maven Telecom Churn** | 7,043 | [Maven Analytics](https://www.mavenanalytics.io/data-playground) | Secondary dataset with different feature distribution for cross-validation |
-| **SEBD (Enterprise Billing)** | 54,000 | Synthetic (from real schema) | Primary demo dataset — real billing schema with fault codes, segments, anomaly labels |
+| **SEBD (Enterprise Billing)** | 54,000 | Synthetic (generated) | Primary demo dataset — generic billing schema with fault codes, segments, anomaly labels |
 
 Download: `python scripts/download_datasets.py` (auto-fetches to `data/raw/`)
 
 ### Synthetic Enterprise Billing Dataset (SEBD)
 
-The project was developed against a **real enterprise billing file** (IBM Usage Processing File)
-under NDA. The real data cannot be committed. Instead, `scripts/generate_sebd.py` anonymises it:
+SEBD is a **fully synthetic** dataset generated to mirror a *generic* enterprise-billing
+schema. It uses no production data and contains no real identifiers — every value is
+produced from a seeded RNG, so the output is deterministic and safe to commit. The
+schema models the kinds of fields a billing pipeline emits:
 
 ```
-Real Schema (NDA-blocked)          →    SEBD Schema (safe to commit)
-─────────────────────────────────        ───────────────────────────────
-BGW_RECORD_ID                      →    TXN_ID
-ENTERPRISE                         →    ACC_CODE (ACC-0001, ACC-0002, ...)
-HVS_LICENSE                        →    SVC_SKU (SKU-0001, SKU-0002, ...)
-STATUS                             →    PROC_STATUS
-ERROR_DESCRIPTION                  →    FAULT_CODE (UNIT_EMPTY_FAULT, ...)
-ENTERPRISE_GROUP                   →    SEGMENT (SEGMENT_A, SEGMENT_B, ...)
+SEBD Schema (generated, safe to commit)
+───────────────────────────────────────
+TXN_ID                 transaction id (1..N)
+ACC_CODE               account code        (ACC-0001, ACC-0002, ...)
+SVC_SKU                service SKU          (SKU-0001, SKU-0002, ...)
+UNIT_COUNT             billable units
+FAULT_CODE             fault label         (UNIT_EMPTY_FAULT, ...)
+SEGMENT                customer segment    (SEGMENT_A, SEGMENT_B, ...)
+PROC_STATUS            processing status   (PROCESSED, FAILED, ...)
 ```
 
-**To generate SEBD** (requires access to the internal CSV):
+**To (re)generate SEBD**:
 ```bash
-python scripts/generate_sebd.py --input /path/to/internal.csv --output data/raw/sebd.csv
+python scripts/generate_sebd.py --output data/raw/sebd.csv --rows 54000
 ```
 
-**Without the internal CSV** — the system works fully with the 3 public datasets above.
-The SEBD is an optional additional evaluation source.
+The system also works fully with the 3 public datasets above; SEBD is the primary
+demo/evaluation source.
 
 ### Anomaly Injection (5 types)
 
