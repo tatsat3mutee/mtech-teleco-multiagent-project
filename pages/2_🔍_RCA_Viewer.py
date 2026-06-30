@@ -48,8 +48,8 @@ with st.sidebar:
     st.page_link("pages/1_📊_Upload_Detect.py", label="📊  Upload & Detect")
     st.page_link("pages/2_🔍_RCA_Viewer.py", label="🔍  RCA Viewer")
     st.page_link("pages/3_📚_Knowledge_Base.py", label="📚  Knowledge Base")
-    st.page_link("pages/4_�_Experiment_Results.py", label="📊  Experiment Results")
-    st.page_link("pages/5_�📈_Live_Monitoring.py", label="📈  Live Monitoring")
+    st.page_link("pages/4_📊_Experiment_Results.py", label="📊  Experiment Results")
+    st.page_link("pages/5_📈_Live_Monitoring.py", label="📈  Live Monitoring")
     st.markdown("---")
     st.caption("MTech Thesis — Tatsat Pandey | 2026")
 
