@@ -3,7 +3,7 @@ LLM utility — LiteLLM Router with 2-provider fallback (Groq + OpenRouter)
 and optional Langfuse observability.
 
 Architecture:
-  call_llm() → LiteLLM.Router → slot 1: groq/llama-3.3-70b-versatile  (rpm=28)
+    call_llm() → LiteLLM.Router → slot 1: groq/openai/gpt-oss-120b       (rpm=28)
                               → slot 2: openrouter/deepseek-r1:free     (rpm=18)
                               → slot 3: openrouter/llama-3.3-70b:free   (rpm=18)
                               → slot 4: openrouter/deepseek-chat:free   (rpm=18)
@@ -68,7 +68,7 @@ _LANGFUSE_ACTIVE: bool = _setup_langfuse()
 
 # ── Provider → LiteLLM model-string mapping (used by get_active_provider) ───
 _LITELLM_MODEL: dict[str, str] = {
-    "groq":        "groq/llama-3.3-70b-versatile",
+    "groq":        "groq/openai/gpt-oss-120b",
     "openrouter":  "openrouter/meta-llama/llama-3.3-70b-instruct:free",
 }
 
@@ -112,7 +112,7 @@ def call_llm(
     Call the LLM via LiteLLM Router with automatic rate-limit-aware fallback.
 
     Fallback order (from config.LITELLM_ROUTER_CONFIG, alias "primary"):
-        Groq llama-3.3-70b → OpenRouter DeepSeek R1 → OpenRouter Llama 3.3 → OpenRouter DeepSeek Chat
+        Groq GPT OSS 120B → OpenRouter DeepSeek R1 → OpenRouter Llama 3.3 → OpenRouter DeepSeek Chat
     The Router shifts traffic automatically before any provider hits its rpm cap.
 
     Observability:

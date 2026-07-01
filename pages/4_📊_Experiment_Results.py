@@ -53,7 +53,7 @@ CONFIG_DESCRIPTIONS = {
     "C1": "Baseline: IsolationForest + vector_first only (no GraphRAG, no SWARM)",
     "C2": "IsolationForest + SWARM routing (graph_first for zero_billing/cdr_failure)",
     "C3": "C2 + GraphRAG retrieval (NetworkX graph + BM25 hybrid)",
-    "C4": "C3 + LiteLLM Router (Groq→OpenRouter: DeepSeek R1/Llama 3.3 rate-limit failover)",
+    "C4": "C3 + LiteLLM Router (Groq GPT OSS 120B → OpenRouter fallback)",
     "C5": "Full system: C4 + rule_based_prefilter + SEBD validation dataset",
 }
 

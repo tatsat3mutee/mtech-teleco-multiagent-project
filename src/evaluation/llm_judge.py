@@ -5,8 +5,8 @@ Provides two independent evaluation surfaces:
 
 1. Likert-scale quality judgement — scores an RCA on 4 axes (correctness,
    groundedness, actionability, completeness) against a reference RCA on a
-   1-5 scale. Uses the configured LLM (Groq or Kimi) when a key is set, else falls back
-   to the Groq Llama 3.3 70B generator (bias disclosed in output).
+    1-5 scale. Uses the configured judge endpoint when set, else falls back
+    to Groq GPT OSS 120B (bias disclosed in output).
 
 2. RAGAS-style faithfulness & answer-relevancy — custom, framework-free
    implementations that do NOT require the `ragas` package (which pulls in
@@ -40,8 +40,8 @@ from config import (
 # ────────────────────────────────────────────────────────────────────
 # Judge client abstraction
 # ────────────────────────────────────────────────────────────────────
-# The judge uses any OpenAI-compatible endpoint: OpenAI, Kimi (Moonshot),
-# MiniMax, Groq, DeepSeek, etc. Configure via JUDGE_BASE_URL + JUDGE_API_KEY
+# The judge uses any OpenAI-compatible endpoint: OpenAI-compatible routers,
+# Groq, DeepSeek, etc. Configure via JUDGE_BASE_URL + JUDGE_API_KEY
 # in .env. Falls back to Groq SDK if only GROQ_API_KEY is set.
 
 _JUDGE_BACKEND = None  # "openai_compat" | "groq" | "none"

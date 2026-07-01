@@ -38,7 +38,7 @@ TOP_K = 5
 # ── LLM (Groq primary, OpenRouter fallback — 2 keys total) ──
 #
 # Priority order:
-#   1. Groq  (free tier, 30 req/min, fast inference)
+#   1. Groq  (free tier, fast inference; GPT OSS 120B replaces deprecated Llama 3.3 70B)
 #   2. OpenRouter  (free-tier models: DeepSeek R1, Llama 3.3 70B, DeepSeek Chat)
 #
 # The LiteLLM Router (LITELLM_ROUTER_CONFIG below) handles rate-limit-aware
@@ -65,12 +65,12 @@ _explicit_model = os.environ.get("LLM_MODEL", "")
 if _explicit_key:
     LLM_API_KEY  = _explicit_key
     LLM_BASE_URL = _explicit_base
-    LLM_MODEL    = _explicit_model or "llama-3.3-70b-versatile"
+    LLM_MODEL    = _explicit_model or "openai/gpt-oss-120b"
     LLM_PROVIDER = "custom"
 elif GROQ_API_KEY:
     LLM_API_KEY  = GROQ_API_KEY
     LLM_BASE_URL = "https://api.groq.com/openai/v1"
-    LLM_MODEL    = _explicit_model or "llama-3.3-70b-versatile"
+    LLM_MODEL    = _explicit_model or "openai/gpt-oss-120b"
     LLM_PROVIDER = "groq"
 elif OPENROUTER_API_KEY:
     LLM_API_KEY  = OPENROUTER_API_KEY
@@ -80,7 +80,7 @@ elif OPENROUTER_API_KEY:
 else:
     LLM_API_KEY  = ""
     LLM_BASE_URL = ""
-    LLM_MODEL    = _explicit_model or "llama-3.3-70b-versatile"
+    LLM_MODEL    = _explicit_model or "openai/gpt-oss-120b"
     LLM_PROVIDER = "none"
 
 LLM_TEMPERATURE = 0.1
@@ -93,7 +93,7 @@ LITELLM_ROUTER_CONFIG = [
     {
         "model_name": "primary",
         "litellm_params": {
-            "model":   "groq/llama-3.3-70b-versatile",
+            "model":   "groq/openai/gpt-oss-120b",
             "api_key": GROQ_API_KEY,
         },
         "rpm": 28,    # stay under Groq's 30 req/min hard cap
@@ -142,7 +142,7 @@ LANGFUSE_HOST       = os.environ.get("LANGFUSE_HOST", "https://cloud.langfuse.co
 # Override JUDGE_* env vars to use a completely separate provider.
 JUDGE_API_KEY      = os.environ.get("JUDGE_API_KEY",   GROQ_API_KEY)
 JUDGE_BASE_URL     = os.environ.get("JUDGE_BASE_URL",  "https://api.groq.com/openai/v1")
-JUDGE_MODEL        = os.environ.get("JUDGE_MODEL",     "llama-3.3-70b-versatile")
+JUDGE_MODEL        = os.environ.get("JUDGE_MODEL",     "openai/gpt-oss-120b")
 JUDGE_TEMPERATURE  = 0.0  # deterministic scoring
 JUDGE_FALLBACK_MODEL = LLM_MODEL
 

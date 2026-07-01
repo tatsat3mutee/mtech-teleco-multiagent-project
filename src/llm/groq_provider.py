@@ -1,4 +1,4 @@
-"""Groq provider — llama-3.3-70b-versatile via OpenAI-compatible API.
+"""Groq provider — openai/gpt-oss-120b via OpenAI-compatible API.
 
 Thin wrapper used by the Streamlit UI to display provider availability.
 Actual routing is handled by the LiteLLM Router in src/agents/llm_utils.py.
@@ -7,7 +7,7 @@ from src.agents.llm_utils import call_llm
 import os
 
 PROVIDER_NAME = "groq"
-DEFAULT_MODEL  = "llama-3.3-70b-versatile"
+DEFAULT_MODEL  = "openai/gpt-oss-120b"
 
 
 def complete(system_prompt: str, user_prompt: str, **kwargs) -> str:
