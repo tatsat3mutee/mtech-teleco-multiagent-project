@@ -3,10 +3,8 @@ LLM utility — LiteLLM Router with 2-provider fallback (Groq + OpenRouter)
 and optional Langfuse observability.
 
 Architecture:
-    call_llm() → LiteLLM.Router → slot 1: groq/openai/gpt-oss-120b       (rpm=28)
-                              → slot 2: openrouter/deepseek-r1:free     (rpm=18)
-                              → slot 3: openrouter/llama-3.3-70b:free   (rpm=18)
-                              → slot 4: openrouter/deepseek-chat:free   (rpm=18)
+    call_llm() → LiteLLM.Router → group 1: groq/openai/gpt-oss-120b              (rpm=28)
+                              → group 2: OpenRouter free fallback pool          (rpm=18 each)
                                       ↓
                                Langfuse trace  (if LANGFUSE_PUBLIC_KEY is set)
 
@@ -69,7 +67,7 @@ _LANGFUSE_ACTIVE: bool = _setup_langfuse()
 # ── Provider → LiteLLM model-string mapping (used by get_active_provider) ───
 _LITELLM_MODEL: dict[str, str] = {
     "groq":        "groq/openai/gpt-oss-120b",
-    "openrouter":  "openrouter/meta-llama/llama-3.3-70b-instruct:free",
+    "openrouter":  "openrouter/openai/gpt-oss-120b:free",
 }
 
 _PROVIDER_KEY: dict[str, str] = {
@@ -111,9 +109,9 @@ def call_llm(
     """
     Call the LLM via LiteLLM Router with automatic rate-limit-aware fallback.
 
-    Fallback order (from config.LITELLM_ROUTER_CONFIG, alias "primary"):
-        Groq GPT OSS 120B → OpenRouter DeepSeek R1 → OpenRouter Llama 3.3 → OpenRouter DeepSeek Chat
-    The Router shifts traffic automatically before any provider hits its rpm cap.
+    Fallback order:
+        Groq GPT OSS 120B → OpenRouter free-model pool
+    Groq is always attempted first; OpenRouter is used only if Groq fails or rate-limits.
 
     Observability:
         When LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY are set, every call
@@ -165,23 +163,30 @@ def call_llm(
     if session_id:
         metadata["session_id"] = session_id
 
-    try:
-        router = get_router()
-        resp = router.completion(
-            model="primary",      # Router picks least-busy slot from LITELLM_ROUTER_CONFIG
-            messages=messages,
-            temperature=temperature,
-            timeout=60,
-            metadata=metadata,
-        )
-        content = resp.choices[0].message.content
-        # model_used is the actual slot the Router selected
-        model_used = getattr(resp, "model", "primary")
-        print(f"[LLM] model={model_used} trace={trace_name}")
-        return content
-    except Exception as e:
-        print(f"[LLM] Router failed: {e}")
-        return None
+    router = get_router()
+    model_groups: list[str] = []
+    if GROQ_API_KEY:
+        model_groups.append("groq-primary")
+    if OPENROUTER_API_KEY:
+        model_groups.append("openrouter-fallback")
+
+    for model_group in model_groups:
+        try:
+            resp = router.completion(
+                model=model_group,
+                messages=messages,
+                temperature=temperature,
+                timeout=60,
+                metadata=metadata,
+            )
+            content = resp.choices[0].message.content
+            model_used = getattr(resp, "model", model_group)
+            print(f"[LLM] model={model_used} trace={trace_name}")
+            return content
+        except Exception as e:
+            print(f"[LLM] Router group failed ({model_group}): {e}")
+
+    return None
 
 
 def get_active_provider() -> str:

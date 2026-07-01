@@ -39,10 +39,10 @@ TOP_K = 5
 #
 # Priority order:
 #   1. Groq  (free tier, fast inference; GPT OSS 120B replaces deprecated Llama 3.3 70B)
-#   2. OpenRouter  (free-tier models: DeepSeek R1, Llama 3.3 70B, DeepSeek Chat)
+#   2. OpenRouter  (free-tier models: GPT OSS 120B, Qwen, Llama 3.3 70B)
 #
-# The LiteLLM Router (LITELLM_ROUTER_CONFIG below) handles rate-limit-aware
-# switching automatically — no manual fallback code needed.
+# call_llm() tries the Groq router group first, then the OpenRouter fallback
+# group if Groq fails or rate-limits.
 
 from dotenv import load_dotenv
 load_dotenv(PROJECT_ROOT / ".env")
@@ -86,12 +86,11 @@ else:
 LLM_TEMPERATURE = 0.1
 
 # ── LiteLLM Router Config — rate-limit-aware multi-model fallback ──────────
-# All 4 slots are aliased as "primary". The Router picks the least-busy slot,
-# shifting traffic to OpenRouter automatically when Groq's 30 req/min cap is
-# reached, then restoring Groq after a 60-second cooldown.
+# Groq is attempted first by call_llm(); OpenRouter slots are used only as the
+# fallback group if Groq fails or rate-limits.
 LITELLM_ROUTER_CONFIG = [
     {
-        "model_name": "primary",
+        "model_name": "groq-primary",
         "litellm_params": {
             "model":   "groq/openai/gpt-oss-120b",
             "api_key": GROQ_API_KEY,
@@ -100,16 +99,16 @@ LITELLM_ROUTER_CONFIG = [
         "tpm": 28000, # stay under Groq's 30K tokens/min hard cap
     },
     {
-        "model_name": "primary",
+        "model_name": "openrouter-fallback",
         "litellm_params": {
-            "model":    "openrouter/deepseek/deepseek-r1:free",
+            "model":    "openrouter/openai/gpt-oss-120b:free",
             "api_key":  OPENROUTER_API_KEY,
             "api_base": "https://openrouter.ai/api/v1",
         },
         "rpm": 18,
     },
     {
-        "model_name": "primary",
+        "model_name": "openrouter-fallback",
         "litellm_params": {
             "model":    "openrouter/meta-llama/llama-3.3-70b-instruct:free",
             "api_key":  OPENROUTER_API_KEY,
@@ -118,9 +117,9 @@ LITELLM_ROUTER_CONFIG = [
         "rpm": 18,
     },
     {
-        "model_name": "primary",
+        "model_name": "openrouter-fallback",
         "litellm_params": {
-            "model":    "openrouter/deepseek/deepseek-chat:free",
+            "model":    "openrouter/qwen/qwen3-coder:free",
             "api_key":  OPENROUTER_API_KEY,
             "api_base": "https://openrouter.ai/api/v1",
         },
