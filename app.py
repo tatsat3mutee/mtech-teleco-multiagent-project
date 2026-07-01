@@ -542,7 +542,7 @@ with tab_stack:
         st.markdown("""
         | Component | Technology |
         |-----------|------------|
-        | LLM (primary) | Groq · llama-3.3-70b-versatile |
+        | LLM (primary) | Groq · openai/gpt-oss-120b |
         | LLM (fallback) | OpenRouter · DeepSeek R1 / Llama 3.3 (free) |
         | Agents | LangGraph StateGraph |
         | Vector DB | ChromaDB (sqlite-backed) |
