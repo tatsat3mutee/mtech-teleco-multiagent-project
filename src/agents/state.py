@@ -58,6 +58,7 @@ class AgentState(TypedDict, total=False):
     critic_verdict: str        # "accept" | "revise"
     critic_reasons: List[str]
     critic_confidence: float
+    critic_claims: List[dict]  # [{"claim": str, "grounded": bool, "evidence": str|None}]
     critic_attempts: int
 
     # Reporter Agent output

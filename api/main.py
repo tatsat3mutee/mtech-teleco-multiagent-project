@@ -213,6 +213,7 @@ async def _run_pipeline(job_id: str, anomaly: dict):
                 final_state.update(node_state)
 
         # Extract result
+        critic_confidence = final_state.get("critic_confidence", 0.5)
         result = {
             "rca_report":         final_state.get("rca_report", ""),
             "root_cause":         final_state.get("root_cause", ""),
@@ -225,6 +226,14 @@ async def _run_pipeline(job_id: str, anomaly: dict):
             "anomaly_type":       anomaly.get("anomaly_type"),
             "account_id":         anomaly.get("account_id"),
             "trace_id":           final_state.get("trace_id"),
+            # Critic explainability (examiner feedback: show WHY it was approved)
+            "critic_verdict":     final_state.get("critic_verdict", ""),
+            "critic_confidence":  critic_confidence,
+            "critic_reasons":     final_state.get("critic_reasons", []),
+            "critic_claims":      final_state.get("critic_claims", []),
+            "critic_attempts":    final_state.get("critic_attempts", 0),
+            # False-positive guard rail: low grounding confidence => manual review
+            "review_required":    bool(critic_confidence < 0.5),
         }
 
         # ── Cache result for future identical requests ──────────────────────────

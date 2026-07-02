@@ -213,6 +213,16 @@ if anomaly_options:
             if rca:
                 st.success(f"RCA generated in {elapsed:.0f}ms")
 
+                # ── False-positive guard rail (examiner feedback) ──────────────
+                critic_conf = result.get("critic_confidence",
+                                         rca.get("confidence_score", 1.0))
+                if result.get("review_required") or critic_conf < 0.5:
+                    st.error(
+                        "⚠️ **LOW CONFIDENCE — possible false positive.** "
+                        "The Critic found weak playbook evidence for this anomaly. "
+                        "Manual review recommended before acting on this RCA."
+                    )
+
                 # Log to SQLite for live monitoring dashboard
                 try:
                     from src.utils.inference_log import log_inference
@@ -258,6 +268,36 @@ if anomaly_options:
                     st.markdown("#### Recommended Actions")
                     for i, act in enumerate(rca.get("recommended_actions", []), 1):
                         st.markdown(f"{i}. {act}")
+
+                # ── Critic Explainability (examiner feedback: show WHY approved) ─
+                critic_verdict = result.get("critic_verdict", "")
+                critic_claims = result.get("critic_claims", []) or []
+                critic_reasons = result.get("critic_reasons", []) or []
+                if critic_verdict or critic_claims or critic_reasons:
+                    with st.expander("⚖️ Critic Explainability — why this RCA was approved",
+                                     expanded=True):
+                        v1, v2, v3 = st.columns(3)
+                        with v1:
+                            badge = "✅ APPROVED" if critic_verdict != "revise" else "↺ REVISED"
+                            st.metric("Critic Verdict", badge)
+                        with v2:
+                            st.metric("Grounding Confidence", f"{critic_conf:.2f} / 1.00")
+                        with v3:
+                            attempts = result.get("critic_attempts", 0)
+                            st.metric("Revisions", max(attempts - 1, 0))
+                        st.progress(min(max(critic_conf, 0.0), 1.0))
+
+                        if critic_claims:
+                            st.markdown("**Claim-by-claim grounding:**")
+                            for c in critic_claims:
+                                mark = "✅" if c.get("grounded") else "❌"
+                                ev = c.get("evidence") or "No evidence found"
+                                st.markdown(f"{mark} {c.get('claim', '')}  \n"
+                                            f"  → _{ev}_")
+                        if critic_reasons:
+                            st.markdown("**Critic notes:**")
+                            for reason in critic_reasons:
+                                st.markdown(f"- {reason}")
 
                 # SWARM routing metadata
                 routing = result.get("routing_explanation", "")

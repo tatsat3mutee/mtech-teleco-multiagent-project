@@ -6,6 +6,8 @@ Outputs are written to AgentState:
     critic_verdict      : "accept" | "revise"
     critic_reasons      : list[str]  — gaps / contradictions flagged
     critic_confidence   : float in [0, 1]
+    critic_claims       : list[dict] — per-claim grounding breakdown
+                          [{"claim": str, "grounded": bool, "evidence": str|None}]
     critic_attempts     : int  — how many times critic has run (cap to avoid loops)
 
 Routing contract: the graph's conditional edge after `critic` returns
@@ -26,7 +28,11 @@ from src.agents.llm_utils import call_llm
 CRITIC_SYSTEM = (
     "You are a senior telecom billing SRE reviewing a junior engineer's RCA "
     "hypothesis. Return JSON ONLY with keys: verdict ('accept' or 'revise'), "
-    "reasons (array of short strings), confidence (0-1 float). Flag the "
+    "reasons (array of short strings), confidence (0-1 float), and claims "
+    "(array of objects, one per factual claim in the hypothesis, each with "
+    "keys: claim (short string), grounded (true/false — is this claim "
+    "traceable to the retrieved evidence?), evidence (the evidence source "
+    "name that supports it, or null if ungrounded)). Flag the "
     "hypothesis as 'revise' ONLY if (a) the hypothesis contradicts the "
     "retrieved evidence, (b) the evidence is too thin to support the claim, "
     "or (c) a more likely root cause is visible in the evidence but ignored. "
@@ -56,6 +62,24 @@ def _parse_json(text: str):
         return None
 
 
+def _parse_claims(parsed: dict) -> list:
+    """Extract per-claim grounding breakdown; tolerate any malformed shape."""
+    claims = []
+    for item in (parsed.get("claims") or [])[:10]:
+        if not isinstance(item, dict):
+            continue
+        claim_text = str(item.get("claim", "")).strip()
+        if not claim_text:
+            continue
+        evidence = item.get("evidence")
+        claims.append({
+            "claim": claim_text[:300],
+            "grounded": bool(item.get("grounded", False)),
+            "evidence": str(evidence)[:200] if evidence else None,
+        })
+    return claims
+
+
 def critic_node(state: dict) -> dict:
     """Review reasoner output. Mutates state in-place and returns it."""
     state["critic_attempts"] = state.get("critic_attempts", 0) + 1
@@ -74,6 +98,7 @@ def critic_node(state: dict) -> dict:
         state["critic_verdict"] = "accept"
         state["critic_reasons"] = ["no hypothesis to review"]
         state["critic_confidence"] = 0.5
+        state["critic_claims"] = []
         return state
 
     user = (
@@ -92,11 +117,13 @@ def critic_node(state: dict) -> dict:
         state["critic_verdict"] = "accept"
         state["critic_reasons"] = ["critic-llm-unavailable"]
         state["critic_confidence"] = 0.5
+        state["critic_claims"] = []
         return state
 
     verdict = str(parsed.get("verdict", "accept")).strip().lower()
     state["critic_verdict"] = "revise" if verdict == "revise" else "accept"
     state["critic_reasons"] = list(parsed.get("reasons", []))[:6]
+    state["critic_claims"] = _parse_claims(parsed)
     try:
         state["critic_confidence"] = float(parsed.get("confidence", 0.5))
     except Exception:
