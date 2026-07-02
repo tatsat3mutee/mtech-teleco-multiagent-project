@@ -433,7 +433,10 @@ st.markdown(f"""
 st.markdown('<div class="bs-section">System Health</div>', unsafe_allow_html=True)
 c1, c2, c3, c4, c5 = st.columns(5)
 with c1: st.metric("KB Chunks", f"{kb_count:,}")
-with c2: st.metric("Records Loaded", f"{total_records:,}")
+with c2: st.metric("Labeled Demo Records", f"{total_records:,}",
+                   help="IBM Telco subset with injected anomaly labels (data/processed/anomalies_labeled.csv) — "
+                        "used by the UI for deterministic demos. The full merged corpus "
+                        "(IBM 7,043 + Maven 6,500 ≈ 13.5K) is loaded by the pipeline via load_combined().")
 with c3: st.metric("Anomalies", f"{anomaly_count:,}")
 with c4: st.metric("Detector", "READY" if model_exists else "TRAIN")
 with c5: st.metric("Inferences", f"{infer_summary['total']:,}")
