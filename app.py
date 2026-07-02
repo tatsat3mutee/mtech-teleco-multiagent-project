@@ -162,12 +162,18 @@ st.markdown("""
     .bs-card {
         background: var(--bg-card);
         border: 1px solid var(--border);
+        border-left: 3px solid var(--card-accent, var(--border));
         border-radius: 8px;
         padding: 1.1rem 1.25rem;
         height: 100%;
+        min-height: 15rem;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        overflow-wrap: break-word;
         transition: border-color 0.15s;
     }
-    .bs-card:hover { border-color: var(--accent); }
+    .bs-card:hover { border-color: var(--accent); border-left-color: var(--card-accent, var(--accent)); }
     .bs-card-icon { font-size: 1.4rem; margin-bottom: 0.4rem; }
     .bs-card-title {
         color: var(--text-primary);
@@ -192,11 +198,31 @@ st.markdown("""
     .bs-card-meta {
         font-size: 0.78rem;
         color: var(--text-muted);
-        font-family: 'SF Mono', Consolas, monospace;
         border-top: 1px solid var(--border);
-        padding-top: 0.5rem;
-        margin-top: 0.4rem;
+        padding-top: 0.6rem;
+        margin-top: auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
     }
+    .stApp .bs-chip {
+        display: inline-block;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        font-family: 'SF Mono', Consolas, monospace;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        background: rgba(255,255,255,0.03);
+        white-space: nowrap;
+    }
+    .stApp .bs-chip-owner    { color: #7ee0cb; border-color: #2a5a50; background: rgba(54,186,162,0.10); }
+    .stApp .bs-chip-rag      { color: #8ab4f8; border-color: #2c4a7a; background: rgba(91,141,239,0.12); }
+    .stApp .bs-chip-reason   { color: #c9a6ff; border-color: #4d3a78; background: rgba(155,110,255,0.12); }
+    .stApp .bs-chip-validate { color: #ffce6b; border-color: #6e5322; background: rgba(255,169,64,0.12);  }
+    .stApp .bs-chip-output   { color: #7ed99a; border-color: #2c5e3d; background: rgba(76,207,120,0.12);  }
+    .stApp .bs-chip-infra    { color: #f096b6; border-color: #6b3548; background: rgba(233,105,149,0.12); }
 
     div[data-testid="stMetric"] {
         background: var(--bg-card);
@@ -415,58 +441,58 @@ with c5: st.metric("Inferences", f"{infer_summary['total']:,}")
 # Service Catalog — agents
 st.markdown('<div class="bs-section">Service Catalog · Agent Pipeline</div>', unsafe_allow_html=True)
 cards = [
-    {"icon": "🔎", "kind": "Component · Agent", "title": "Investigator",
+    {"icon": "🔎", "kind": "Component · Agent", "title": "Investigator", "accent": "#5b8def",
      "desc": "Hybrid retriever (BM25 + dense + cross-encoder reranker) over a curated KB of RCA playbooks, SLA contracts, and historical incidents.",
-     "meta": "owner: tatsat · stage: rag"},
-    {"icon": "🧠", "kind": "Component · Agent", "title": "Reasoner",
+     "chips": '<span class="bs-chip bs-chip-owner">owner: tatsat</span><span class="bs-chip bs-chip-rag">stage: rag</span>'},
+    {"icon": "🧠", "kind": "Component · Agent", "title": "Reasoner", "accent": "#9b6eff",
      "desc": "Synthesizes retrieved context with anomaly features to produce structured root-cause hypotheses with explicit evidence chains and confidence scoring.",
-     "meta": "owner: tatsat · stage: reasoning"},
-    {"icon": "🛡️", "kind": "Component · Agent", "title": "Critic",
+     "chips": '<span class="bs-chip bs-chip-owner">owner: tatsat</span><span class="bs-chip bs-chip-reason">stage: reasoning</span>'},
+    {"icon": "🛡️", "kind": "Component · Agent", "title": "Critic", "accent": "#ffa940",
      "desc": "Independent validator that re-checks JSON schema, refusal patterns, and evidence-grounding before the report is published.",
-     "meta": "owner: tatsat · stage: validation"},
-    {"icon": "📋", "kind": "Component · Agent", "title": "Reporter",
+     "chips": '<span class="bs-chip bs-chip-owner">owner: tatsat</span><span class="bs-chip bs-chip-validate">stage: validation</span>'},
+    {"icon": "📋", "kind": "Component · Agent", "title": "Reporter", "accent": "#4ccf78",
      "desc": "Validates and emits machine-readable JSON RCA reports with severity, recommended actions, and audit metadata for downstream ticketing.",
-     "meta": "owner: tatsat · stage: output"},
+     "chips": '<span class="bs-chip bs-chip-owner">owner: tatsat</span><span class="bs-chip bs-chip-output">stage: output</span>'},
 ]
 cols = st.columns(4)
 for col, c in zip(cols, cards):
     with col:
         st.markdown(f"""
-        <div class="bs-card">
+        <div class="bs-card" style="--card-accent: {c['accent']};">
             <div class="bs-card-icon">{c['icon']}</div>
             <div class="bs-card-kind">{c['kind']}</div>
             <div class="bs-card-title">{c['title']}</div>
             <div class="bs-card-desc">{c['desc']}</div>
-            <div class="bs-card-meta">{c['meta']}</div>
+            <div class="bs-card-meta">{c['chips']}</div>
         </div>
         """, unsafe_allow_html=True)
 
 # Service Catalog — data + infra
 st.markdown('<div class="bs-section">Service Catalog · Data & Infra</div>', unsafe_allow_html=True)
 infra = [
-    {"icon": "🗂", "kind": "Resource · Vector DB", "title": "ChromaDB",
+    {"icon": "🗂", "kind": "Resource · Vector DB", "title": "ChromaDB", "accent": "#36baa2",
      "desc": f"Embedding store backing the RAG retriever. {kb_count:,} chunks indexed via sentence-transformers (all-MiniLM-L6-v2).",
-     "meta": "type: vector-store · backend: sqlite"},
-    {"icon": "📦", "kind": "Resource · Dataset", "title": "Telco Billing Corpus",
+     "chips": '<span class="bs-chip bs-chip-rag">type: vector-store</span><span class="bs-chip">backend: sqlite</span>'},
+    {"icon": "📦", "kind": "Resource · Dataset", "title": "Telco Billing Corpus", "accent": "#e96995",
      "desc": "IBM Telco (7K) + Maven Telecom (7K) + SEBD Enterprise Billing (54K). Labeled anomalies across 5 types.",
-     "meta": "records: 68k · types: 5"},
-    {"icon": "🤖", "kind": "Resource · ML Model", "title": "IsolationForest + Rule Pre-filter",
+     "chips": '<span class="bs-chip bs-chip-infra">records: 68k</span><span class="bs-chip">types: 5</span>'},
+    {"icon": "🤖", "kind": "Resource · ML Model", "title": "IsolationForest + Rule Pre-filter", "accent": "#ffa940",
      "desc": "Unsupervised anomaly detector with rule-based pre-filter. Trained on tenure, monthly_charges, total_charges.",
-     "meta": "framework: scikit-learn"},
-    {"icon": "📊", "kind": "Resource · Tracking", "title": "MLflow",
+     "chips": '<span class="bs-chip bs-chip-validate">framework: scikit-learn</span>'},
+    {"icon": "📊", "kind": "Resource · Tracking", "title": "MLflow", "accent": "#5b8def",
      "desc": "Experiment tracking for every ablation run: metrics, params, artifacts. File-store at <code>mlruns/</code>.",
-     "meta": "ui: localhost:5000"},
+     "chips": '<span class="bs-chip bs-chip-output">ui: localhost:5000</span>'},
 ]
 cols = st.columns(4)
 for col, c in zip(cols, infra):
     with col:
         st.markdown(f"""
-        <div class="bs-card">
+        <div class="bs-card" style="--card-accent: {c['accent']};">
             <div class="bs-card-icon">{c['icon']}</div>
             <div class="bs-card-kind">{c['kind']}</div>
             <div class="bs-card-title">{c['title']}</div>
             <div class="bs-card-desc">{c['desc']}</div>
-            <div class="bs-card-meta">{c['meta']}</div>
+            <div class="bs-card-meta">{c['chips']}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -513,7 +539,7 @@ with tab_about:
     paired-bootstrap, and Wilcoxon signed-rank testing.
 
     **Reproducibility.** Configurable OpenAI-compatible LLM backend (Groq/OpenRouter),
-    file-backed MLflow tracking, deterministic seeded test set, and 87-test pytest suite.
+    file-backed MLflow tracking, deterministic seeded test set, and 116-test pytest suite.
     """)
 
 with tab_arch:
