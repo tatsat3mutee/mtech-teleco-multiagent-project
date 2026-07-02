@@ -54,7 +54,7 @@ redis>=5.0.0,<6.0
 psycopg2-binary>=2.9.0,<3.0
 
 # UI extras
-plotly>=5.18.0,<6.0
+plotly>=5.18.0,<7.0
 fpdf2>=2.7.0,<3.0
 
 # Testing

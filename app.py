@@ -543,24 +543,26 @@ with tab_about:
     """)
 
 with tab_arch:
-    st.code("""
-┌─────────────────────────────────────────────────────────────────┐
-│  L5  UI & Monitoring          Streamlit + MLflow + SQLite       │
-├─────────────────────────────────────────────────────────────────┤
-│  L4  Agent Orchestration      LangGraph StateGraph              │
-│      Investigator → Reasoner → Critic → Reporter                │
-├─────────────────────────────────────────────────────────────────┤
-│  L3  RAG Engine               Hybrid (BM25 + dense + reranker)  │
-│                                ChromaDB · sentence-transformers │
-├─────────────────────────────────────────────────────────────────┤
-│  L2  Anomaly Detection        IsolationForest + Rule Pre-filter │
-├─────────────────────────────────────────────────────────────────┤
-│  L1  Data Ingestion           Pandas · NumPy · Augmentation     │
-├─────────────────────────────────────────────────────────────────┤
-│  L0  LLM Backend              Groq (primary) · OpenRouter (fallback)      │
-│                                LiteLLM Router — auto rate-limit failover   │
-└─────────────────────────────────────────────────────────────────┘
-    """, language="text")
+    _layers = [
+        ("L5", "UI & Monitoring", "Streamlit · MLflow · SQLite", "#e96995"),
+        ("L4", "Agent Orchestration", "LangGraph StateGraph — Investigator → Reasoner → Critic → Reporter", "#9b6eff"),
+        ("L3", "RAG Engine", "Hybrid BM25 + dense + reranker · ChromaDB · sentence-transformers", "#5b8def"),
+        ("L2", "Anomaly Detection", "IsolationForest + Rule Pre-filter", "#ffa940"),
+        ("L1", "Data Ingestion", "Pandas · NumPy · Anomaly Injection", "#4ccf78"),
+        ("L0", "LLM Backend", "Groq GPT OSS 120B (primary) · OpenRouter (fallback) · LiteLLM Router auto-failover", "#36baa2"),
+    ]
+    _rows = "".join(
+        f'''<div style="display:flex; align-items:center; gap:1rem; background:var(--bg-card);
+             border:1px solid var(--border); border-left:3px solid {color}; border-radius:8px;
+             padding:0.8rem 1.1rem; margin-bottom:0.45rem;">
+            <span style="font-family:Consolas,monospace; font-weight:700; color:{color}; min-width:2.2rem;">{lvl}</span>
+            <span style="color:var(--text-primary); font-weight:600; min-width:12rem;">{name}</span>
+            <span style="color:var(--text-secondary); font-size:0.88rem;">{tech}</span>
+        </div>'''
+        for lvl, name, tech, color in _layers
+    )
+    st.markdown(f'<div style="margin-top:0.5rem;">{_rows}</div>', unsafe_allow_html=True)
+    st.caption("Each layer depends only on the layers below it. The LLM backend (L0) is shared by all four agents through a single router gateway.")
 
 with tab_stack:
     t1, t2 = st.columns(2)
@@ -569,7 +571,7 @@ with tab_stack:
         | Component | Technology |
         |-----------|------------|
         | LLM (primary) | Groq · openai/gpt-oss-120b |
-        | LLM (fallback) | OpenRouter · DeepSeek R1 / Llama 3.3 (free) |
+        | LLM (fallback) | OpenRouter · GPT OSS 120B / Llama 3.3 / Qwen3 (free) |
         | Agents | LangGraph StateGraph |
         | Vector DB | ChromaDB (sqlite-backed) |
         | Embeddings | sentence-transformers (MiniLM-L6) |
