@@ -166,7 +166,6 @@ st.markdown("""
         border-radius: 8px;
         padding: 1.1rem 1.25rem;
         height: 100%;
-        min-height: 15rem;
         display: flex;
         flex-direction: column;
         min-width: 0;
@@ -243,7 +242,11 @@ st.markdown("""
         font-weight: 700;
     }
 
-    div[data-testid="stHorizontalBlock"] { align-items: stretch !important; }
+    div[data-testid="stHorizontalBlock"] { align-items: stretch !important; flex-wrap: wrap !important; }
+    div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
+        min-width: 15rem;
+        flex: 1 1 15rem;
+    }
     div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] > div { height: 100%; }
 
     .bs-link {
@@ -477,7 +480,7 @@ infra = [
      "desc": f"Embedding store backing the RAG retriever. {kb_count:,} chunks indexed via sentence-transformers (all-MiniLM-L6-v2).",
      "chips": '<span class="bs-chip bs-chip-rag">type: vector-store</span><span class="bs-chip">backend: sqlite</span>'},
     {"icon": "📦", "kind": "Resource · Dataset", "title": "Telco Billing Corpus", "accent": "#e96995",
-     "desc": "IBM Telco (7K) + Maven Telecom (7K) + SEBD Enterprise Billing (54K). Labeled anomalies across 5 types.",
+     "desc": "IBM Telco (7K) + Maven Telecom (6.5K) + SEBD Enterprise Billing (54K). Labeled anomalies across 5 types.",
      "chips": '<span class="bs-chip bs-chip-infra">records: 68k</span><span class="bs-chip">types: 5</span>'},
     {"icon": "🤖", "kind": "Resource · ML Model", "title": "IsolationForest + Rule Pre-filter", "accent": "#ffa940",
      "desc": "Unsupervised anomaly detector with rule-based pre-filter. Trained on tenure, monthly_charges, total_charges.",
