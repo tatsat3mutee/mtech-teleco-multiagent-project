@@ -129,6 +129,19 @@ def reasoner_node(state: AgentState) -> AgentState:
         retrieved_docs=docs_text if docs_text else "No relevant documents retrieved.",
     )
 
+    # Revision pass: incorporate the Critic's feedback so the rewrite actually
+    # addresses the flagged gaps instead of regenerating the same hypothesis.
+    critic_reasons = state.get("critic_reasons", [])
+    if state.get("critic_verdict") == "revise" and critic_reasons:
+        feedback = "\n".join(f"- {r}" for r in critic_reasons)
+        prompt += (
+            "\n\nA senior reviewer flagged the following issues with your "
+            "previous hypothesis. Revise it to address EACH issue, and only "
+            "make claims that are supported by the retrieved documents:\n"
+            f"{feedback}\n\nPREVIOUS HYPOTHESIS:\n"
+            f"{state.get('hypothesis', '')[:1500]}"
+        )
+
     # Try LLM first
     hypothesis = call_llm(REASONER_SYSTEM_PROMPT, prompt)
 

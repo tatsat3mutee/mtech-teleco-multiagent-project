@@ -146,7 +146,7 @@ if df is not None:
     with col_b:
         st.markdown("")  # visual spacer
         st.markdown("")
-        detect_button = st.button("🚀  Run Detection", type="primary", use_container_width=True)
+        detect_button = st.button("🚀  Run Detection", type="primary", width="stretch")
 
     if detect_button:
         with st.spinner("Running anomaly detection..."):
@@ -202,7 +202,7 @@ if df is not None:
                                 labels={"x": "Contract Type", "y": "Anomaly Type", "color": "Count"},
                             )
                             fig.update_layout(height=350, margin=dict(t=50, b=20))
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width="stretch")
                         except ImportError:
                             pass
 

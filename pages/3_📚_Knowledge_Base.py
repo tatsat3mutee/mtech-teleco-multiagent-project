@@ -83,13 +83,13 @@ with c3:
 st.markdown("---")
 b1, b2 = st.columns(2)
 with b1:
-    if st.button("🔨  Build Knowledge Base", type="primary", use_container_width=True):
+    if st.button("🔨  Build Knowledge Base", type="primary", width="stretch"):
         with st.spinner("Building knowledge base..."):
             kb = build_knowledge_base(force_rebuild=False)
             st.success(f"Ready — {kb.count} chunks indexed.")
             st.rerun()
 with b2:
-    if st.button("🔄  Rebuild from Scratch", use_container_width=True):
+    if st.button("🔄  Rebuild from Scratch", width="stretch"):
         with st.spinner("Rebuilding knowledge base..."):
             kb = build_knowledge_base(force_rebuild=True)
             st.success(f"Rebuilt — {kb.count} chunks indexed.")

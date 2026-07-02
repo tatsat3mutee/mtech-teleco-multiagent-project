@@ -28,10 +28,23 @@ backed by hybrid RAG (BM25 + dense + GraphRAG) and a critic/refinement loop.
 | **Detection** | IsolationForest, statistical z-score, rule-based validators |
 | **Retrieval** | ChromaDB (all-MiniLM-L6-v2, 384-dim), BM25, NetworkX GraphRAG, RRF fusion |
 | **Agents** | LangGraph orchestrator → Investigator → Reasoner → Critic → Reporter |
-| **LLM Router** | LiteLLM Router (Groq → OpenRouter: DeepSeek R1, Llama 3.3, DeepSeek Chat) with automatic rate-limit failover |
+| **LLM Router** | LiteLLM Router — Groq GPT OSS 120B primary → OpenRouter free fallback (GPT OSS 120B, Llama 3.3 70B, Qwen3 Coder) with automatic rate-limit failover |
 | **Tracking** | MLflow experiments + Langfuse traces |
 | **Frontend** | Streamlit 5-page dashboard |
 | **API** | FastAPI REST endpoint |
+
+---
+
+## UI Screenshots
+
+| Page | Preview |
+|------|---------|
+| **Overview** — platform status, LLM/KB health badges | ![Overview](docs/screenshots/01_overview.png) |
+| **Upload & Detect** — dataset stats, IsolationForest run, anomaly distribution | ![Upload & Detect](docs/screenshots/02_upload_detect.png) |
+| **RCA Viewer** — anomaly picker, multi-agent pipeline, Critic explainability | ![RCA Viewer](docs/screenshots/03_rca_viewer.png) |
+| **Knowledge Base** — playbook chunks, semantic search | ![Knowledge Base](docs/screenshots/04_knowledge_base.png) |
+| **Experiment Results** — ablation configs C1–C5, quality + latency charts | ![Experiment Results](docs/screenshots/05_experiment_results.png) |
+| **Live Monitoring** — per-inference latency and audit log | ![Live Monitoring](docs/screenshots/06_live_monitoring.png) |
 
 ---
 

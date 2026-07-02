@@ -114,7 +114,7 @@ if anomaly_options:
     with btn_col:
         st.markdown("")
         st.markdown("")
-        generate_btn = st.button("🚀  Generate RCA", type="primary", use_container_width=True)
+        generate_btn = st.button("🚀  Generate RCA", type="primary", width="stretch")
 
     selected_idx = anomaly_options.index(selected)
     selected_row = anomalies_df.head(max_display).iloc[selected_idx]
@@ -394,7 +394,7 @@ if anomaly_options:
     with b2:
         st.markdown("")
         st.markdown("")
-        batch_btn = st.button("📦  Run Batch RCA", type="primary", use_container_width=True)
+        batch_btn = st.button("📦  Run Batch RCA", type="primary", width="stretch")
 
     if batch_btn:
         with st.spinner(f"Processing {batch_limit} anomalies..."):

@@ -80,10 +80,10 @@ def run_pipeline(anomaly_record: dict) -> dict:
     }
 
     start_time = time.time()
+    result: dict = {}
 
     with trace_pipeline(anomaly_id, anomaly_type) as trace:
         try:
-            result = {}
             for step_output in graph.stream(initial_state):
                 for node_name, node_state in step_output.items():
                     # Create Langfuse span per node
@@ -96,7 +96,7 @@ def run_pipeline(anomaly_record: dict) -> dict:
 
         except Exception as e:
             logger.error(f"Pipeline error at node: {e}")
-            result = {**initial_state, **result} if 'result' in dir() else initial_state.copy()
+            result = {**initial_state, **result}
             result["pipeline_status"] = "partial"
             result["error_message"] = str(e)
             result["latency_ms"] = (time.time() - start_time) * 1000

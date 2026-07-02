@@ -52,7 +52,7 @@ st.markdown("""
 # Refresh control
 col_a, col_b = st.columns([1, 6])
 with col_a:
-    if st.button("🔄 Refresh", use_container_width=True):
+    if st.button("🔄 Refresh", width="stretch"):
         st.rerun()
 with col_b:
     st.caption("Data source: `inferences.db` (SQLite). Logged from Upload→Detect and RCA Viewer pages.")
