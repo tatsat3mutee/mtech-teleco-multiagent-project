@@ -122,11 +122,12 @@ def critic_node(state: dict) -> dict:
 
     verdict = str(parsed.get("verdict", "accept")).strip().lower()
     state["critic_verdict"] = "revise" if verdict == "revise" else "accept"
-    state["critic_reasons"] = list(parsed.get("reasons", []))[:6]
+    state["critic_reasons"] = [str(r)[:300] for r in parsed.get("reasons", [])][:6]
     state["critic_claims"] = _parse_claims(parsed)
     try:
-        state["critic_confidence"] = float(parsed.get("confidence", 0.5))
-    except Exception:
+        conf = float(parsed.get("confidence", 0.5))
+        state["critic_confidence"] = min(max(conf, 0.0), 1.0)  # clamp to [0, 1]
+    except (TypeError, ValueError):
         state["critic_confidence"] = 0.5
     return state
 

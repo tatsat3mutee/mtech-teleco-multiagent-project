@@ -234,6 +234,9 @@ async def _run_pipeline(job_id: str, anomaly: dict):
             "critic_attempts":    final_state.get("critic_attempts", 0),
             # False-positive guard rail: low grounding confidence => manual review
             "review_required":    bool(critic_confidence < 0.5),
+            # Telemetry (per-stage latency + token usage)
+            "stage_timings":      final_state.get("stage_timings", {}),
+            "token_usage":        final_state.get("token_usage", {}),
         }
 
         # ── Cache result for future identical requests ──────────────────────────

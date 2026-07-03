@@ -181,12 +181,52 @@ def call_llm(
             )
             content = resp.choices[0].message.content
             model_used = getattr(resp, "model", model_group)
+            # Telemetry: accumulate token usage for the current pipeline run
+            usage = getattr(resp, "usage", None)
+            if usage is not None:
+                _USAGE_TOTALS["prompt_tokens"] += int(getattr(usage, "prompt_tokens", 0) or 0)
+                _USAGE_TOTALS["completion_tokens"] += int(getattr(usage, "completion_tokens", 0) or 0)
+                _USAGE_TOTALS["calls"] += 1
+            _log_provider_event(model_group, model_used, "success", trace_name)
             print(f"[LLM] model={model_used} trace={trace_name}")
             return content
         except Exception as e:
+            _log_provider_event(model_group, "", _classify_error(e), trace_name)
             print(f"[LLM] Router group failed ({model_group}): {e}")
 
     return None
+
+
+# ── Telemetry helpers ───────────────────────────────────────────────────────
+_USAGE_TOTALS: dict = {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0}
+
+
+def reset_usage() -> None:
+    """Reset the per-run token accumulator (call at pipeline start)."""
+    _USAGE_TOTALS.update({"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+
+
+def get_usage() -> dict:
+    """Return a snapshot of tokens/calls accumulated since the last reset."""
+    return dict(_USAGE_TOTALS)
+
+
+def _classify_error(e: Exception) -> str:
+    text = str(e).lower()
+    if "rate" in text and "limit" in text or "429" in text:
+        return "rate_limit"
+    if "timeout" in text or "timed out" in text:
+        return "timeout"
+    return "error"
+
+
+def _log_provider_event(group: str, model: str, event: str, trace_name: str) -> None:
+    """Best-effort provider resilience event log (SQLite). Never raises."""
+    try:
+        from src.utils.inference_log import log_provider_event
+        log_provider_event(group=group, model=model, event=event, trace_name=trace_name)
+    except Exception:
+        pass
 
 
 def get_active_provider() -> str:

@@ -47,9 +47,30 @@ CREATE TABLE IF NOT EXISTS inferences (
     model         TEXT,
     source        TEXT
 );
+CREATE TABLE IF NOT EXISTS provider_events (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp     TEXT    NOT NULL,
+    provider_group TEXT,
+    model         TEXT,
+    event         TEXT,
+    trace_name    TEXT
+);
 CREATE INDEX IF NOT EXISTS idx_inferences_ts ON inferences(timestamp);
 CREATE INDEX IF NOT EXISTS idx_inferences_type ON inferences(anomaly_type);
+CREATE INDEX IF NOT EXISTS idx_provider_events_ts ON provider_events(timestamp);
 """
+
+# Columns added after the original release — applied via guarded ALTER TABLE
+# so existing databases upgrade in place.
+_MIGRATION_COLUMNS = [
+    ("investigator_ms", "REAL"),
+    ("reasoner_ms", "REAL"),
+    ("critic_ms", "REAL"),
+    ("reporter_ms", "REAL"),
+    ("prompt_tokens", "INTEGER"),
+    ("completion_tokens", "INTEGER"),
+    ("review_required", "INTEGER"),
+]
 
 _SCHEMA_PG = """
 CREATE TABLE IF NOT EXISTS inferences (
@@ -94,6 +115,11 @@ def _conn():
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=10000")
     conn.executescript(_SCHEMA_SQLITE)
+    for col, ctype in _MIGRATION_COLUMNS:
+        try:
+            conn.execute(f"ALTER TABLE inferences ADD COLUMN {col} {ctype}")
+        except sqlite3.OperationalError:
+            pass  # column already exists
     return conn
 
 
@@ -107,6 +133,10 @@ def log_inference(
     source: str = "ui_single",
     provider: Optional[str] = None,
     model: Optional[str] = None,
+    stage_timings: Optional[dict] = None,
+    prompt_tokens: Optional[int] = None,
+    completion_tokens: Optional[int] = None,
+    review_required: Optional[bool] = None,
 ) -> None:
     """Append a row. Best-effort — never raises into the UI."""
     try:
@@ -118,12 +148,15 @@ def log_inference(
             except Exception:
                 provider = provider or "unknown"
                 model = model or "unknown"
+        st = stage_timings or {}
         with _conn() as c:
             c.execute(
                 """INSERT INTO inferences
                    (timestamp, anomaly_id, anomaly_type, severity, root_cause,
-                    confidence, latency_ms, provider, model, source)
-                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    confidence, latency_ms, provider, model, source,
+                    investigator_ms, reasoner_ms, critic_ms, reporter_ms,
+                    prompt_tokens, completion_tokens, review_required)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     datetime.now(timezone.utc).isoformat(timespec="seconds"),
                     str(anomaly_id),
@@ -135,11 +168,51 @@ def log_inference(
                     provider,
                     model,
                     source,
+                    st.get("investigator_ms"),
+                    st.get("reasoner_ms"),
+                    st.get("critic_ms"),
+                    st.get("reporter_ms"),
+                    int(prompt_tokens) if prompt_tokens is not None else None,
+                    int(completion_tokens) if completion_tokens is not None else None,
+                    (1 if review_required else 0) if review_required is not None else None,
                 ),
             )
     except Exception as e:
         # Logging must never break inference
         print(f"[inference_log] write failed: {e}")
+
+
+def log_provider_event(group: str, model: str, event: str, trace_name: str = "") -> None:
+    """Record a provider success/rate_limit/timeout/error event. Best-effort."""
+    try:
+        with _conn() as c:
+            c.execute(
+                "INSERT INTO provider_events (timestamp, provider_group, model, event, trace_name) "
+                "VALUES (?,?,?,?,?)",
+                (
+                    datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    str(group), str(model)[:120], str(event), str(trace_name)[:80],
+                ),
+            )
+    except Exception as e:
+        print(f"[inference_log] provider event write failed: {e}")
+
+
+def provider_stats():
+    """Aggregate provider resilience stats for the dashboard."""
+    try:
+        with _conn() as c:
+            rows = c.execute(
+                "SELECT provider_group, event, COUNT(*) FROM provider_events "
+                "GROUP BY provider_group, event"
+            ).fetchall()
+            out: dict = {}
+            for group, event, n in rows:
+                out.setdefault(group, {})[event] = n
+            return out
+    except Exception as e:
+        print(f"[inference_log] provider stats failed: {e}")
+        return {}
 
 
 def fetch_recent(limit: int = 50):

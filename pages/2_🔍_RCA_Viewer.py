@@ -226,6 +226,7 @@ if anomaly_options:
                 # Log to SQLite for live monitoring dashboard
                 try:
                     from src.utils.inference_log import log_inference
+                    _usage = result.get("token_usage", {}) or {}
                     log_inference(
                         anomaly_id=rca.get("anomaly_id", anomaly_record.get("account_id", "N/A")),
                         anomaly_type=anomaly_record.get("anomaly_type", "unknown"),
@@ -234,6 +235,10 @@ if anomaly_options:
                         confidence=anomaly_record.get("confidence", 0.0),
                         latency_ms=elapsed,
                         source="ui_single",
+                        stage_timings=result.get("stage_timings"),
+                        prompt_tokens=_usage.get("prompt_tokens"),
+                        completion_tokens=_usage.get("completion_tokens"),
+                        review_required=result.get("review_required"),
                     )
                 except Exception:
                     pass
@@ -320,6 +325,18 @@ if anomaly_options:
                 with tab_meta:
                     st.write(f"**Status:** {result.get('pipeline_status', 'N/A')}")
                     st.write(f"**Latency:** {elapsed:.0f}ms")
+                    _stages = result.get("stage_timings", {}) or {}
+                    if _stages:
+                        st.markdown("**Per-stage latency:**")
+                        for _stage in ("investigator", "reasoner", "critic", "reporter"):
+                            _v = _stages.get(f"{_stage}_ms")
+                            if _v is not None:
+                                st.write(f" {_stage.capitalize()}: {_v:.0f} ms")
+                    _usage = result.get("token_usage", {}) or {}
+                    if _usage.get("calls"):
+                        st.write(f"**Tokens:** {_usage.get('prompt_tokens', 0):,} prompt + "
+                                 f"{_usage.get('completion_tokens', 0):,} completion "
+                                 f"({_usage.get('calls', 0)} LLM calls)")
                     st.write(f"**Retrieval Strategy:** {result.get('retrieval_strategy', 'N/A')}")
                     st.write(f"**Retrieval Query:** {result.get('retrieval_query', 'N/A')}")
                     st.write(f"**Documents Retrieved:** {result.get('retrieval_count', 0)}")

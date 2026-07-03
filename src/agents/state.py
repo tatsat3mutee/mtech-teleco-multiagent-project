@@ -73,3 +73,6 @@ class AgentState(TypedDict, total=False):
     error_message: str
     latency_ms: float
     model_name: str
+    stage_timings: dict      # {"investigator_ms": float, "reasoner_ms": ..., ...}
+    token_usage: dict        # {"prompt_tokens": int, "completion_tokens": int, "calls": int}
+    review_required: bool    # critic_confidence < 0.5 ⇒ manual review recommended

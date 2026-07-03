@@ -5,6 +5,8 @@ Provides:
 - bootstrap_ci: percentile bootstrap 95% CI for a metric
 - paired_bootstrap_pvalue: two-sided p-value for H0: mean(a) == mean(b), paired
 - wilcoxon_paired: Wilcoxon signed-rank wrapper (scipy)
+- benjamini_hochberg: FDR correction across a family of p-values
+- cohens_d_paired: standardized effect size for paired samples
 
 Usage:
     from src.evaluation.stats import bootstrap_ci, paired_bootstrap_pvalue
@@ -112,10 +114,57 @@ def compare_configs(
                 entry["delta_vs_baseline"] = float(np.mean(vals) - np.mean(baseline))
                 entry["p_bootstrap"] = paired_bootstrap_pvalue(vals, baseline)
                 entry["p_wilcoxon"] = wilcoxon_paired(vals, baseline)["pvalue"]
+                entry["cohens_d"] = cohens_d_paired(vals, baseline)
             else:
                 entry.update({"delta_vs_baseline": float(np.mean(vals) - np.mean(baseline)),
                               "p_bootstrap": float("nan"),
                               "p_wilcoxon": float("nan"),
                               "note": "unpaired — lengths differ"})
         out[name] = entry
+
+    # Benjamini-Hochberg FDR correction across the family of pairwise tests
+    tested = [n for n in out if n != baseline_key and not np.isnan(out[n].get("p_bootstrap", float("nan")))]
+    if tested:
+        adjusted = benjamini_hochberg([out[n]["p_bootstrap"] for n in tested])
+        for n, p_adj in zip(tested, adjusted):
+            out[n]["p_bootstrap_bh"] = p_adj
+        adjusted_w = benjamini_hochberg([out[n]["p_wilcoxon"] for n in tested])
+        for n, p_adj in zip(tested, adjusted_w):
+            out[n]["p_wilcoxon_bh"] = p_adj
     return out
+
+
+def benjamini_hochberg(pvalues: Sequence[float]) -> list:
+    """Benjamini-Hochberg FDR-adjusted p-values (step-up, monotone).
+
+    Returns adjusted p-values in the ORIGINAL input order.
+    """
+    p = np.asarray(pvalues, dtype=float)
+    m = p.size
+    if m == 0:
+        return []
+    order = np.argsort(p)
+    ranked = p[order]
+    adjusted = ranked * m / (np.arange(m) + 1)
+    # enforce monotonicity from the largest rank downwards
+    adjusted = np.minimum.accumulate(adjusted[::-1])[::-1]
+    adjusted = np.clip(adjusted, 0.0, 1.0)
+    out = np.empty(m, dtype=float)
+    out[order] = adjusted
+    return [float(x) for x in out]
+
+
+def cohens_d_paired(a: Sequence[float], b: Sequence[float]) -> float:
+    """Cohen's d for paired samples: mean(diff) / std(diff, ddof=1).
+
+    Returns 0.0 when undefined (fewer than 2 pairs or zero variance).
+    """
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    if a.shape != b.shape or a.size < 2:
+        return 0.0
+    diffs = a - b
+    sd = diffs.std(ddof=1)
+    if sd == 0:
+        return 0.0
+    return float(diffs.mean() / sd)

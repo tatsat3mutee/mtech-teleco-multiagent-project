@@ -216,20 +216,26 @@ class GraphRAGBuilder:
                     self._add_entity(r["dst"], self.graph.nodes.get(r["dst"], {}).get("type", "COMPONENT"), cid)
                     self._add_relation(r["src"], r["rel"], r["dst"], cid)
 
-        # Corpus-level heuristic closure: if both endpoints of a known-good
-        # relation appear anywhere in the graph but no edge was added
-        # chunk-locally, connect them using the union of their chunk sets.
-        # This ensures multi-hop retrieval works even when evidence is spread
-        # across separate playbook sections.
+        # Corpus-level ONTOLOGY CLOSURE (explicitly synthetic): if both
+        # endpoints of a curated domain relation appear anywhere in the graph
+        # but no edge was extracted chunk-locally, connect them so multi-hop
+        # retrieval works when evidence is spread across playbook sections.
+        # These edges are marked origin="ontology_closure" — they come from
+        # the hand-curated domain ontology, NOT from playbook text extraction,
+        # and are reported as such in explainability output.
+        closure_count = 0
         for src, rel, dst in _HEURISTIC_RELATIONS:
             if self.graph.has_node(src) and self.graph.has_node(dst):
                 if not self.graph.has_edge(src, dst):
                     union_chunks = (self.graph.nodes[src].get("chunks", set())
                                     | self.graph.nodes[dst].get("chunks", set()))
-                    self.graph.add_edge(src, dst, rel=rel, chunks=set(union_chunks))
+                    self.graph.add_edge(src, dst, rel=rel, chunks=set(union_chunks),
+                                        origin="ontology_closure")
+                    closure_count += 1
 
         print(f"[graph-rag] built graph: {self.graph.number_of_nodes()} nodes, "
-              f"{self.graph.number_of_edges()} edges, {len(self.chunks)} chunks")
+              f"{self.graph.number_of_edges()} edges "
+              f"({closure_count} ontology-closure), {len(self.chunks)} chunks")
 
     def save(self, out_dir: Path = GRAPHRAG_DIR) -> None:
         out_dir.mkdir(parents=True, exist_ok=True)

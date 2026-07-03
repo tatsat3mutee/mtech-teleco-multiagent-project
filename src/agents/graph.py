@@ -82,14 +82,30 @@ def run_pipeline(anomaly_record: dict) -> dict:
     start_time = time.time()
     result: dict = {}
 
+    # Reset the per-run LLM token accumulator (best-effort)
+    try:
+        from src.agents.llm_utils import reset_usage, get_usage
+        reset_usage()
+    except Exception:
+        get_usage = None  # type: ignore
+
+    stage_timings: dict = {}
+
     with trace_pipeline(anomaly_id, anomaly_type) as trace:
         try:
+            node_start = time.time()
             for step_output in graph.stream(initial_state):
                 for node_name, node_state in step_output.items():
                     # Create Langfuse span per node
                     span = create_span(trace, node_name)
                     result.update(node_state)
                     span.end()
+                    # Per-stage latency: delta since the previous node finished.
+                    # Revision loops accumulate into the same stage key.
+                    elapsed_ms = (time.time() - node_start) * 1000
+                    key = f"{node_name}_ms"
+                    stage_timings[key] = stage_timings.get(key, 0.0) + elapsed_ms
+                    node_start = time.time()
 
             result["latency_ms"] = (time.time() - start_time) * 1000
             result["trace_id"] = getattr(trace, "id", None)
@@ -101,6 +117,15 @@ def run_pipeline(anomaly_record: dict) -> dict:
             result["error_message"] = str(e)
             result["latency_ms"] = (time.time() - start_time) * 1000
             result["trace_id"] = getattr(trace, "id", None)
+
+    result["stage_timings"] = stage_timings
+    if get_usage is not None:
+        try:
+            result["token_usage"] = get_usage()
+        except Exception:
+            pass
+    # False-positive guard rail: low critic confidence => manual review needed
+    result["review_required"] = bool(result.get("critic_confidence", 1.0) < 0.5)
 
     return result
 

@@ -136,12 +136,23 @@ LANGFUSE_SECRET_KEY = os.environ.get("LANGFUSE_SECRET_KEY", "")
 LANGFUSE_HOST       = os.environ.get("LANGFUSE_HOST", "https://cloud.langfuse.com")
 
 # ── Judge LLM (evaluation) ──
-# Uses Groq by default (same key, different role = still cross-validated since
-# the generator uses OpenRouter free models when Groq rate-limits out).
-# Override JUDGE_* env vars to use a completely separate provider.
-JUDGE_API_KEY      = os.environ.get("JUDGE_API_KEY",   GROQ_API_KEY)
-JUDGE_BASE_URL     = os.environ.get("JUDGE_BASE_URL",  "https://api.groq.com/openai/v1")
-JUDGE_MODEL        = os.environ.get("JUDGE_MODEL",     "openai/gpt-oss-120b")
+# Judge independence: the generator uses Groq GPT-OSS-120B, so the judge
+# defaults to a DIFFERENT model family (Llama 3.3 70B via OpenRouter) to avoid
+# self-affinity bias in LLM-as-Judge scoring. Falls back to Groq only when no
+# OpenRouter key is configured. Override JUDGE_* env vars for a fully separate
+# provider (e.g., GPT-4o / Claude) on the final evaluation run.
+if os.environ.get("JUDGE_API_KEY"):
+    JUDGE_API_KEY  = os.environ["JUDGE_API_KEY"]
+    JUDGE_BASE_URL = os.environ.get("JUDGE_BASE_URL", "https://api.groq.com/openai/v1")
+    JUDGE_MODEL    = os.environ.get("JUDGE_MODEL", "openai/gpt-oss-120b")
+elif OPENROUTER_API_KEY:
+    JUDGE_API_KEY  = OPENROUTER_API_KEY
+    JUDGE_BASE_URL = os.environ.get("JUDGE_BASE_URL", "https://openrouter.ai/api/v1")
+    JUDGE_MODEL    = os.environ.get("JUDGE_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
+else:
+    JUDGE_API_KEY  = GROQ_API_KEY
+    JUDGE_BASE_URL = os.environ.get("JUDGE_BASE_URL", "https://api.groq.com/openai/v1")
+    JUDGE_MODEL    = os.environ.get("JUDGE_MODEL", "openai/gpt-oss-120b")
 JUDGE_TEMPERATURE  = 0.0  # deterministic scoring
 JUDGE_FALLBACK_MODEL = LLM_MODEL
 
@@ -151,6 +162,16 @@ ABLATION_CONFIGS = {
         "use_rag": False,
         "use_agents": False,
         "description": "Config A: Direct LLM — no RAG, no agents",
+    },
+    "cot_baseline": {
+        "use_rag": False,
+        "use_agents": False,
+        "description": "Config A2: Few-shot Chain-of-Thought baseline — no retrieval",
+    },
+    "react_baseline": {
+        "use_rag": True,
+        "use_agents": False,
+        "description": "Config A3: ReAct baseline — reason/act/observe loop with retrieval",
     },
     "rag_only": {
         "use_rag": True,

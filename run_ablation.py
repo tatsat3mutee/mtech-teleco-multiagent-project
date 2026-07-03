@@ -1,14 +1,22 @@
 """
-Ablation study harness — runs configs A-E from config.ABLATION_CONFIGS
+Ablation study harness — runs configs from config.ABLATION_CONFIGS
 over ground-truth-derived anomalies and evaluates each against the
 60-item reference RCA corpus.
 
 Configs:
-  A  no_rag           Direct LLM, no retrieval, no agents
-  B  rag_only         Vector retrieval stuffed into a single LLM call
-  C  single_agent_rag One agent: retrieve + reason + report in one call
-  D  multi_agent_rag  Full 4-agent LangGraph pipeline (proposed system)
-  E  graph_rag        Full pipeline + GraphRAG retrieval (USE_GRAPH_RAG=1)
+  A   no_rag           Direct LLM, no retrieval, no agents
+  A2  cot_baseline     Few-shot Chain-of-Thought prompting, no retrieval
+  A3  react_baseline   ReAct loop (reason -> retrieve -> observe -> answer)
+  B   rag_only         Vector retrieval stuffed into a single LLM call
+  C   single_agent_rag One agent: retrieve + reason + report in one call
+  D   multi_agent_rag  Full 4-agent LangGraph pipeline (proposed system)
+  E   graph_rag        Full pipeline + GraphRAG retrieval (USE_GRAPH_RAG=1)
+
+Blind-type evaluation (default): the ground-truth anomaly_type is NOT shown
+to any config. Each input carries a detector-style heuristic estimate
+(production-faithful — in deployment the type comes from the detector, not
+an oracle). Scoring still compares the report's predicted type against the
+true GT type. Use --leak-types to reproduce the legacy oracle-type behaviour.
 
 Usage:
   python run_ablation.py --quick               # 3 anomalies per type (15 total)
@@ -23,7 +31,9 @@ Outputs:
   MLflow runs (experiment from config.MLFLOW_EXPERIMENT) per config
 """
 import argparse
+import copy
 import json
+import math
 import os
 import sys
 import time
@@ -44,11 +54,61 @@ _DIRECT_SYSTEM = (
     '"recommendation": "<1-2 sentence fix>"}'
 )
 
+_COT_SYSTEM = (
+    "You are a telecom billing root-cause-analysis expert. Think step by step: "
+    "1) inspect the numeric features, 2) decide which anomaly pattern they match, "
+    "3) reason about the most likely system-level cause, 4) propose a fix. "
+    "Work through your reasoning, then finish with ONLY a JSON object on the "
+    'final line: {"anomaly_type": "<one of zero_billing|duplicate_charge|'
+    'usage_spike|cdr_failure|sla_breach>", "root_cause": "<2-4 sentences>", '
+    '"recommendation": "<1-2 sentences>"}\n\n'
+    "Example:\n"
+    "Features: monthly_charges=0.0, total_charges=3200, tenure=41\n"
+    "Step 1: charges dropped to zero while the account has a long history.\n"
+    "Step 2: active customer + zero invoice matches the zero_billing pattern.\n"
+    "Step 3: most likely the rating engine skipped the account this cycle.\n"
+    'Final: {"anomaly_type": "zero_billing", "root_cause": "Rating engine '
+    'skipped the account during the billing cycle...", "recommendation": '
+    '"Re-rate the cycle and re-issue the invoice."}'
+)
+
+
+def _estimate_input_type(anomaly: dict) -> str:
+    """Detector-faithful heuristic type estimate (mirrors detector logic).
+
+    Used in blind mode so configs receive a production-realistic (fallible)
+    type signal instead of the ground-truth oracle label.
+    """
+    mc = anomaly.get("monthly_charges")
+    tc = anomaly.get("total_charges")
+    if tc is None or (isinstance(tc, float) and math.isnan(tc)):
+        return "cdr_failure"
+    if mc == 0 and tc == 0:
+        return "cdr_failure"
+    if mc == 0:
+        return "zero_billing"
+    if mc and mc >= 500:
+        return "usage_spike"
+    if mc and mc > 200:
+        return "duplicate_charge"
+    if mc and mc > 150:
+        return "sla_breach"
+    return "unknown"
+
+
+def _blind_copy(anomaly: dict) -> dict:
+    """Copy for pipeline input with the oracle label replaced by an estimate."""
+    blind = copy.deepcopy(anomaly)
+    blind["anomaly_type"] = _estimate_input_type(anomaly)
+    blind.pop("ground_truth_id", None)  # scoring key must not reach the LLM path
+    return blind
+
 
 def _anomaly_prompt(anomaly: dict) -> str:
     return (
         f"Account {anomaly.get('account_id')} flagged as {anomaly.get('anomaly_type')} "
-        f"(confidence {anomaly.get('confidence', 0):.2f}). "
+        f"by the anomaly detector (heuristic estimate — may be wrong; confidence "
+        f"{anomaly.get('confidence', 0):.2f}). "
         f"monthly_charges={anomaly.get('monthly_charges')}, "
         f"total_charges={anomaly.get('total_charges')}, "
         f"tenure={anomaly.get('tenure')} months, "
@@ -91,6 +151,77 @@ def _run_no_rag(anomaly: dict) -> dict:
         "rca_report": _parse_report(raw, anomaly),
         "retrieval_count": 0,
         "pipeline_status": "completed" if raw else "failed",
+        "latency_ms": (time.time() - t0) * 1000,
+    }
+
+
+def _run_cot(anomaly: dict) -> dict:
+    """Few-shot chain-of-thought baseline — no retrieval, structured reasoning."""
+    from src.agents.llm_utils import call_llm
+    t0 = time.time()
+    raw = call_llm(_COT_SYSTEM, _anomaly_prompt(anomaly), trace_name="ablation_cot")
+    # CoT output has reasoning lines then a final JSON line — parse from the tail
+    report = None
+    if raw:
+        for line in reversed(raw.strip().splitlines()):
+            line = line.strip().lstrip("Final:").strip()
+            if line.startswith("{"):
+                report = _parse_report(line, anomaly)
+                break
+    if report is None:
+        report = _parse_report(raw, anomaly)
+    return {
+        "anomaly_data": anomaly,
+        "rca_report": report,
+        "retrieval_count": 0,
+        "pipeline_status": "completed" if raw else "failed",
+        "latency_ms": (time.time() - t0) * 1000,
+    }
+
+
+def _run_react(anomaly: dict, max_steps: int = 3) -> dict:
+    """ReAct baseline — iterative Thought/Action(Search)/Observation loop.
+
+    The model may issue SEARCH[query] actions (served by the same KB as other
+    configs) and must finish with FINAL[{json}].
+    """
+    from src.agents.llm_utils import call_llm
+    t0 = time.time()
+    system = (
+        "You are a telecom billing RCA expert using the ReAct pattern. "
+        "On each turn respond with EITHER:\n"
+        "Thought: <reasoning>\nAction: SEARCH[<query max 12 words>]\n"
+        "OR, when confident:\n"
+        "Thought: <reasoning>\nAction: FINAL[{\"anomaly_type\": \"<zero_billing|"
+        "duplicate_charge|usage_spike|cdr_failure|sla_breach>\", \"root_cause\": "
+        "\"<2-4 sentences>\", \"recommendation\": \"<1-2 sentences>\"}]"
+    )
+    transcript = _anomaly_prompt(anomaly)
+    docs_seen = 0
+    raw_final = None
+    for _ in range(max_steps):
+        raw = call_llm(system, transcript, trace_name="ablation_react")
+        if not raw:
+            break
+        if "FINAL[" in raw:
+            raw_final = raw.split("FINAL[", 1)[1]
+            raw_final = raw_final.rsplit("]", 1)[0] if "]" in raw_final else raw_final
+            break
+        if "SEARCH[" in raw:
+            query = raw.split("SEARCH[", 1)[1].split("]", 1)[0][:120]
+            docs = _retrieve_docs(query, k=3)
+            docs_seen += len(docs)
+            obs = "\n".join(d["text"][:400] for d in docs) or "(no results)"
+            transcript += f"\n\n{raw}\nObservation: {obs}\n\nContinue."
+        else:
+            # Model neither searched nor finalised — nudge once, then stop
+            transcript += f"\n\n{raw}\n\nRespond with SEARCH[...] or FINAL[...] only."
+    report = _parse_report(raw_final, anomaly) if raw_final else {"anomaly_type": "", "root_cause": ""}
+    return {
+        "anomaly_data": anomaly,
+        "rca_report": report,
+        "retrieval_count": docs_seen,
+        "pipeline_status": "completed" if raw_final else "failed",
         "latency_ms": (time.time() - t0) * 1000,
     }
 
@@ -160,6 +291,8 @@ def _run_multi_agent(anomaly: dict, use_graph: bool) -> dict:
 
 _RUNNERS = {
     "no_rag":           lambda a: _run_no_rag(a),
+    "cot_baseline":     lambda a: _run_cot(a),
+    "react_baseline":   lambda a: _run_react(a),
     "rag_only":         lambda a: _run_rag_only(a),
     "single_agent_rag": lambda a: _run_single_agent(a),
     "multi_agent_rag":  lambda a: _run_multi_agent(a, use_graph=False),
@@ -171,28 +304,37 @@ def _scalar_metrics(metrics: dict) -> dict:
     return {k: v for k, v in metrics.items() if isinstance(v, (int, float))}
 
 
-def run_config(name: str, anomalies: list, run_judge: bool) -> dict:
+def run_config(name: str, anomalies: list, run_judge: bool, blind: bool = True) -> dict:
     from src.evaluation.metrics import evaluate_pipeline_results
 
     cfg = ABLATION_CONFIGS[name]
-    print(f"\n=== {cfg['description']} ({len(anomalies)} anomalies) ===")
+    print(f"\n=== {cfg['description']} ({len(anomalies)} anomalies, "
+          f"{'blind' if blind else 'ORACLE-LEAK'} types) ===")
     runner = _RUNNERS[name]
     results = []
     for i, anomaly in enumerate(anomalies, 1):
         print(f"  [{i}/{len(anomalies)}] {anomaly.get('account_id')} "
               f"({anomaly.get('anomaly_type')})", flush=True)
+        pipeline_input = _blind_copy(anomaly) if blind else anomaly
         try:
-            results.append(runner(anomaly))
+            result = runner(pipeline_input)
         except Exception as exc:
             print(f"    FAILED: {exc}")
-            results.append({
-                "anomaly_data": anomaly,
+            result = {
+                "anomaly_data": pipeline_input,
                 "rca_report": {"anomaly_type": "", "root_cause": ""},
                 "pipeline_status": "failed",
                 "latency_ms": 0.0,
                 "retrieval_count": 0,
                 "error_message": str(exc),
-            })
+            }
+        # Restore ground-truth keys for scoring; keep the blind input type
+        # visible for transparency.
+        ad = result.setdefault("anomaly_data", {})
+        ad["input_type"] = pipeline_input.get("anomaly_type", "")
+        ad["anomaly_type"] = anomaly.get("anomaly_type", "")
+        ad["ground_truth_id"] = anomaly.get("ground_truth_id")
+        results.append(result)
 
     metrics = evaluate_pipeline_results(results, run_judge=run_judge)
     metrics["config"] = name
@@ -229,6 +371,10 @@ def main():
                              f"(default: {','.join(ABLATION_CONFIGS)})")
     parser.add_argument("--judge", action="store_true",
                         help="Run LLM-as-Judge + faithfulness scoring (extra API calls)")
+    parser.add_argument("--leak-types", action="store_true",
+                        help="LEGACY: pass ground-truth anomaly_type to configs "
+                             "(oracle labels; inflates type accuracy). Default is "
+                             "blind detector-estimated types.")
     args = parser.parse_args()
 
     names = [c.strip() for c in args.configs.split(",") if c.strip()]
@@ -247,7 +393,8 @@ def main():
     summary = {}
     t0 = time.time()
     for name in names:
-        summary[name] = _scalar_metrics(run_config(name, anomalies, args.judge))
+        summary[name] = _scalar_metrics(
+            run_config(name, anomalies, args.judge, blind=not args.leak_types))
 
     (RESULTS_DIR / "summary.json").write_text(
         json.dumps(summary, indent=2, default=str), encoding="utf-8")

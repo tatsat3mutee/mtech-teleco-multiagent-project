@@ -104,6 +104,11 @@ def investigator_node(state: AgentState) -> AgentState:
             else:
                 print("[GraphRAG] graph not built — falling back to vector retrieval")
         except Exception as _e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "GraphRAG retrieval failed — falling back to vector retrieval",
+                exc_info=_e,
+            )
             print(f"[GraphRAG] error ({_e}) — falling back to vector retrieval")
     # ── Default: ChromaDB dense retrieval ──────────────────────────────────────
     # Query knowledge base

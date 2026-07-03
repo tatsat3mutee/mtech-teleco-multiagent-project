@@ -62,13 +62,55 @@ s = stats()
 total = s["total"]
 avg_lat = s["avg_latency_ms"]
 
-m1, m2, m3 = st.columns(3)
+# Extended telemetry (tokens, review rate, provider events) — best-effort
+_tok_total, _review_rate, _prov = None, None, {}
+try:
+    from src.utils.inference_log import _conn as _ilog_conn, provider_stats
+    with _ilog_conn() as _c:
+        _row = _c.execute(
+            "SELECT SUM(prompt_tokens), SUM(completion_tokens), "
+            "AVG(CASE WHEN review_required IS NOT NULL THEN review_required END) "
+            "FROM inferences").fetchone()
+        if _row:
+            _p, _co, _rr = _row
+            if _p or _co:
+                _tok_total = (_p or 0) + (_co or 0)
+            _review_rate = _rr
+    _prov = provider_stats()
+except Exception:
+    pass
+
+m1, m2, m3, m4, m5 = st.columns(5)
 with m1:
     st.metric("Total Inferences", f"{total:,}")
 with m2:
     st.metric("Avg Latency", f"{avg_lat:.0f} ms" if avg_lat else "—")
 with m3:
     st.metric("Anomaly Types Seen", len(s["by_type"]))
+with m4:
+    st.metric("Total Tokens", f"{_tok_total:,}" if _tok_total else "—",
+              help="Prompt + completion tokens across all logged inferences")
+with m5:
+    st.metric("Review-Required Rate",
+              f"{_review_rate:.1%}" if _review_rate is not None else "—",
+              help="Share of RCAs the Critic flagged as low-confidence "
+                   "(possible false positives routed to manual review)")
+
+if _prov:
+    with st.expander("🛡️ Provider Resilience (LLM router events)"):
+        _rows = []
+        for _group, _events in _prov.items():
+            _ok = _events.get("success", 0)
+            _fail = sum(v for k, v in _events.items() if k != "success")
+            _rows.append({
+                "Provider group": _group,
+                "Success": _ok,
+                "Rate-limit": _events.get("rate_limit", 0),
+                "Timeout": _events.get("timeout", 0),
+                "Other errors": _events.get("error", 0),
+                "Success rate": f"{_ok / max(_ok + _fail, 1):.1%}",
+            })
+        st.dataframe(pd.DataFrame(_rows), hide_index=True, width="stretch")
 
 if total == 0:
     st.info("No inferences logged yet. Run an RCA from the **🔍 RCA Viewer** page to populate this dashboard.")
