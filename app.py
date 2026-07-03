@@ -540,9 +540,10 @@ with tab_about:
     validated JSON RCA reports.
 
     **Evaluation.** Five-config ablation (no-RAG, RAG-only, single-agent+RAG, multi-agent+RAG,
-    multi-agent+GraphRAG), scored on ROUGE-L, BERTScore, type-accuracy, RAGAS-style metrics, and
-    LLM-as-Judge. Statistical significance is assessed via bootstrap confidence intervals,
-    paired-bootstrap, and Wilcoxon signed-rank testing.
+    multi-agent+GraphRAG), scored primarily on LLM-as-Judge and RAGAS-style faithfulness,
+    with BERTScore and ROUGE-L reported as lexical baselines, plus type-accuracy. Statistical
+    significance is assessed via bootstrap confidence intervals, paired-bootstrap, and
+    Wilcoxon signed-rank testing with Benjamini-Hochberg correction.
 
     **Reproducibility.** Configurable OpenAI-compatible LLM backend (Groq/OpenRouter),
     file-backed MLflow tracking, deterministic seeded test set, and 116-test pytest suite.
@@ -590,7 +591,7 @@ with tab_stack:
         | Tracking | MLflow (file-store) |
         | UI | Streamlit |
         | Monitoring | SQLite (`inferences.db`) |
-        | Eval | ROUGE-L · BERTScore · LLM-Judge |
+        | Eval | LLM-Judge · RAGAS · BERTScore · ROUGE-L (baseline) |
         | Stats | Paired-bootstrap · Wilcoxon |
         | Tests | pytest (116 tests) |
         """)
@@ -605,15 +606,20 @@ with tab_results:
             rows = []
             for cfg_key, cfg_data in abl["configs"].items():
                 m = cfg_data["metrics"]
-                rows.append({
-                    "Config": cfg_data["description"],
-                    "ROUGE-L": f"{m['rouge_l_f1']:.3f}",
-                    "BERTScore": f"{m['bert_score_f1']:.3f}",
-                    "Type Acc": f"{m['type_accuracy']:.0%}",
-                    "Latency": f"{m['avg_latency_ms']:.0f}ms",
-                })
+                row = {"Config": cfg_data["description"]}
+                if m.get("llm_judge_score"):
+                    row["LLM-Judge"] = f"{m['llm_judge_score']:.3f}"
+                if m.get("faithfulness_mean"):
+                    row["RAGAS Faithfulness"] = f"{m['faithfulness_mean']:.3f}"
+                row["Type Acc"] = f"{m['type_accuracy']:.0%}"
+                row["BERTScore"] = f"{m['bert_score_f1']:.3f}"
+                row["ROUGE-L (lexical baseline)"] = f"{m['rouge_l_f1']:.3f}"
+                row["Latency"] = f"{m['avg_latency_ms']:.0f}ms"
+                rows.append(row)
             import pandas as _pd
             st.dataframe(_pd.DataFrame(rows), width='stretch', hide_index=True)
+            st.caption("Primary quality metrics: LLM-as-Judge and RAGAS faithfulness. "
+                       "ROUGE-L is a lexical baseline only — it penalises correct paraphrases.")
         else:
             st.info("Ablation results not available. Run `python run_ablation.py`.")
     except Exception as e:

@@ -352,14 +352,23 @@ def run_config(name: str, anomalies: list, run_judge: bool, blind: bool = True) 
     except Exception as exc:
         print(f"  [mlflow] skipped: {exc}")
 
-    print(f"  ROUGE-L F1: {metrics.get('rouge_l_f1', 0):.3f} | "
-          f"type acc: {metrics.get('anomaly_type_accuracy', 0):.2%} | "
-          f"avg latency: {metrics.get('avg_latency_ms', 0):.0f} ms")
+    # Headline metrics first (LLM-Judge + RAGAS-style faithfulness, per
+    # evaluation design); ROUGE-L last as the lexical baseline only.
+    parts = []
+    if metrics.get("llm_judge_score"):
+        parts.append(f"LLM-Judge: {metrics['llm_judge_score']:.3f}")
+    if metrics.get("faithfulness_mean"):
+        parts.append(f"faithfulness: {metrics['faithfulness_mean']:.3f}")
+    parts.append(f"type acc: {metrics.get('anomaly_type_accuracy', 0):.2%}")
+    parts.append(f"avg latency: {metrics.get('avg_latency_ms', 0):.0f} ms")
+    parts.append(f"ROUGE-L (lexical baseline): {metrics.get('rouge_l_f1', 0):.3f}")
+    print("  " + " | ".join(parts))
     return metrics
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run the 5-config ablation study.")
+    parser = argparse.ArgumentParser(description="Run the 7-config ablation study "
+                                                 "(A/A2/A3 baselines + B/C/D/E).")
     parser.add_argument("--quick", action="store_true",
                         help="3 anomalies per type (15 total) for a fast pass")
     parser.add_argument("--full", action="store_true",
@@ -369,8 +378,12 @@ def main():
     parser.add_argument("--configs", type=str, default=",".join(ABLATION_CONFIGS),
                         help="Comma-separated config names "
                              f"(default: {','.join(ABLATION_CONFIGS)})")
-    parser.add_argument("--judge", action="store_true",
-                        help="Run LLM-as-Judge + faithfulness scoring (extra API calls)")
+    parser.add_argument("--judge", dest="judge", action="store_true", default=True,
+                        help="Run LLM-as-Judge + RAGAS-style faithfulness scoring "
+                             "(DEFAULT ON — primary quality metrics per evaluation design)")
+    parser.add_argument("--no-judge", dest="judge", action="store_false",
+                        help="Skip judge/faithfulness scoring (lexical metrics only; "
+                             "NOT sufficient for headline quality claims)")
     parser.add_argument("--leak-types", action="store_true",
                         help="LEGACY: pass ground-truth anomaly_type to configs "
                              "(oracle labels; inflates type accuracy). Default is "

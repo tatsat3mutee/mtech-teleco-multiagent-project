@@ -268,16 +268,18 @@ def print_evaluation_report(metrics: dict):
     print(f"    Avg Latency:          {metrics.get('avg_latency_ms', 0):.0f}ms")
     print(f"    Avg Retrieval Count:  {metrics.get('avg_retrieval_count', 0):.1f}")
 
-    print(f"\n  RCA Quality:")
+    print(f"\n  RCA Quality (primary metrics first):")
+    if "llm_judge_score" in metrics:
+        print(f"    LLM-as-Judge:         {metrics.get('llm_judge_score', 0):.4f}")
+    if "faithfulness_mean" in metrics:
+        print(f"    RAGAS Faithfulness:   {metrics.get('faithfulness_mean', 0):.4f} "
+              f"(judge={metrics.get('judge_backend', '?')})")
     print(f"    Anomaly Type Accuracy: {metrics.get('anomaly_type_accuracy', 0):.2%}")
 
-    if "rouge_l_f1" in metrics:
-        print(f"    ROUGE-L F1:           {metrics.get('rouge_l_f1', 0):.4f}")
     if "bert_score_f1" in metrics:
         print(f"    BERTScore F1:         {metrics.get('bert_score_f1', 0):.4f}")
-    if "faithfulness_mean" in metrics:
-        print(f"\n  RAGAS-style (judge={metrics.get('judge_backend','?')}):")
-        print(f"    Faithfulness:         {metrics.get('faithfulness_mean', 0):.4f}")
+    if "rouge_l_f1" in metrics:
+        print(f"    ROUGE-L F1 (lexical baseline): {metrics.get('rouge_l_f1', 0):.4f}")
         print(f"    Answer Relevancy:     {metrics.get('answer_relevancy_mean', 0):.4f}")
     if "judge_correctness_mean" in metrics:
         print(f"\n  LLM-as-Judge (1-5 Likert):")
