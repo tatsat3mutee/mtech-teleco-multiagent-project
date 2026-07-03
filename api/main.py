@@ -52,6 +52,18 @@ app = FastAPI(
 
 if _has_limiter:
     app.state.limiter = limiter
+
+
+def _rate_limit(rule: str):
+    """Apply a slowapi rate limit when available; no-op decorator otherwise.
+
+    Must be applied *below* the @app.<method> decorator (i.e. before route
+    registration) — wrapping the function afterwards has no effect because
+    FastAPI has already captured the original handler.
+    """
+    if _has_limiter:
+        return limiter.limit(rule)
+    return lambda f: f
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── CORS — restricted to configured origins ────────────────────────────────────
@@ -59,11 +71,18 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
     allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
 
 # ── API Key Auth (optional — disabled when RCA_API_KEY is empty) ───────────────
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+if not RCA_API_KEY:
+    import logging as _logging
+    _logging.getLogger("uvicorn.error").warning(
+        "RCA_API_KEY is not set — API authentication is DISABLED. "
+        "Set RCA_API_KEY before exposing this service to the internet."
+    )
 
 
 async def verify_api_key(api_key: Optional[str] = Security(_api_key_header)):
@@ -75,9 +94,21 @@ async def verify_api_key(api_key: Optional[str] = Security(_api_key_header)):
 
 
 # ── In-memory job store with TTL eviction ──────────────────────────────────────
+import threading
+
 _jobs: Dict[str, Dict[str, Any]] = {}
+_jobs_lock = threading.Lock()
 _MAX_JOBS = 1000
 _JOB_TTL_SECONDS = 3600  # evict completed jobs older than 1 hour
+
+_UUID_PATTERN = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
+
+
+def _validate_job_id(job_id: str) -> None:
+    """Reject malformed job ids before any dict lookup (anti-enumeration)."""
+    if not _UUID_PATTERN.match(job_id or ""):
+        raise HTTPException(status_code=400, detail="Invalid job id format")
 
 PIPELINE_STEPS = [
     "investigator",
@@ -89,21 +120,22 @@ PIPELINE_STEPS = [
 
 def _evict_old_jobs():
     """Remove completed/failed jobs older than TTL. Called before adding new jobs."""
-    if len(_jobs) <= _MAX_JOBS:
-        return
-    now = time.time()
-    to_delete = []
-    for jid, job in _jobs.items():
-        finished = job.get("finished_at")
-        if finished and (now - finished) > _JOB_TTL_SECONDS:
-            to_delete.append(jid)
-    for jid in to_delete:
-        del _jobs[jid]
-    # If still over limit, remove oldest by started_at
-    if len(_jobs) > _MAX_JOBS:
-        sorted_jobs = sorted(_jobs.items(), key=lambda x: x[1].get("started_at") or 0)
-        for jid, _ in sorted_jobs[: len(_jobs) - _MAX_JOBS // 2]:
-            del _jobs[jid]
+    with _jobs_lock:
+        if len(_jobs) <= _MAX_JOBS:
+            return
+        now = time.time()
+        to_delete = []
+        for jid, job in list(_jobs.items()):
+            finished = job.get("finished_at")
+            if finished and (now - finished) > _JOB_TTL_SECONDS:
+                to_delete.append(jid)
+        for jid in to_delete:
+            _jobs.pop(jid, None)
+        # If still over limit, remove oldest by started_at
+        if len(_jobs) > _MAX_JOBS:
+            sorted_jobs = sorted(_jobs.items(), key=lambda x: x[1].get("started_at") or 0)
+            for jid, _ in sorted_jobs[: len(_jobs) - _MAX_JOBS // 2]:
+                _jobs.pop(jid, None)
 
 
 # ── Request / Response Models ──────────────────────────────────────────────────
@@ -150,8 +182,16 @@ class JobStatus(BaseModel):
 
 
 def _update_job(job_id: str, **kwargs):
-    if job_id in _jobs:
-        _jobs[job_id].update(kwargs)
+    with _jobs_lock:
+        if job_id in _jobs:
+            _jobs[job_id].update(kwargs)
+
+
+def _get_job(job_id: str) -> Optional[Dict[str, Any]]:
+    """Thread-safe shallow snapshot of a job (or None)."""
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        return dict(job) if job is not None else None
 
 
 async def _run_pipeline(job_id: str, anomaly: dict):
@@ -200,7 +240,15 @@ async def _run_pipeline(job_id: str, anomaly: dict):
         # Stream step events by intercepting graph execution
         completed = []
         final_state = initial_state.copy()
+        stage_timings: Dict[str, float] = {}
 
+        try:
+            from src.agents.llm_utils import reset_usage, get_usage
+            reset_usage()
+        except Exception:
+            get_usage = None  # type: ignore
+
+        _node_start = time.time()
         for step_output in graph.stream(initial_state):
             for node_name, node_state in step_output.items():
                 if node_name in PIPELINE_STEPS:
@@ -211,6 +259,17 @@ async def _run_pipeline(job_id: str, anomaly: dict):
                         completed_steps=list(completed),
                     )
                 final_state.update(node_state)
+                _elapsed_ms = (time.time() - _node_start) * 1000
+                _key = f"{node_name}_ms"
+                stage_timings[_key] = stage_timings.get(_key, 0.0) + _elapsed_ms
+                _node_start = time.time()
+
+        final_state["stage_timings"] = stage_timings
+        if get_usage is not None:
+            try:
+                final_state["token_usage"] = get_usage()
+            except Exception:
+                pass
 
         # Extract result
         critic_confidence = final_state.get("critic_confidence", 0.5)
@@ -257,10 +316,13 @@ async def _run_pipeline(job_id: str, anomaly: dict):
         )
 
     except Exception as exc:
+        # Log full detail server-side; return a generic message to clients
+        import logging as _logging
+        _logging.getLogger("uvicorn.error").exception(f"Pipeline job {job_id} failed: {exc}")
         _update_job(
             job_id,
             status="failed",
-            error=str(exc),
+            error="Pipeline execution failed — see server logs",
             finished_at=time.time(),
         )
 
@@ -268,21 +330,24 @@ async def _run_pipeline(job_id: str, anomaly: dict):
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @app.get("/health")
-async def health():
-    return {"status": "ok", "jobs_in_memory": len(_jobs)}
+@_rate_limit("60/minute")
+async def health(request: Request):
+    return {"status": "ok"}
 
 
 @app.post("/rca/run", response_model=JobStatus, status_code=202)
+@_rate_limit("10/minute")
 async def run_rca(
-    request: AnomalyRequest,
+    payload: AnomalyRequest,
     background_tasks: BackgroundTasks,
-    http_request: Request,
+    request: Request,
     _auth: None = Depends(verify_api_key),
 ):
     """Submit an anomaly for RCA. Returns job_id immediately; poll /rca/status/{id}."""
     _evict_old_jobs()
     job_id = str(uuid.uuid4())
-    _jobs[job_id] = {
+    anomaly_dict = payload.model_dump()
+    job = {
         "job_id": job_id,
         "status": "queued",
         "current_step": None,
@@ -293,22 +358,21 @@ async def run_rca(
         "finished_at": None,
         "trace_id": None,
     }
-    anomaly_dict = request.model_dump()
+    with _jobs_lock:
+        _jobs[job_id] = job
     background_tasks.add_task(_run_pipeline, job_id, anomaly_dict)
-    return JobStatus(**_jobs[job_id])
-
-
-# Apply rate limit decorator if slowapi is available
-if _has_limiter:
-    run_rca = limiter.limit("10/minute")(run_rca)
+    return JobStatus(**job)
 
 
 @app.get("/rca/status/{job_id}", response_model=JobStatus)
-async def get_status(job_id: str, _auth: None = Depends(verify_api_key)):
+@_rate_limit("120/minute")
+async def get_status(job_id: str, request: Request, _auth: None = Depends(verify_api_key)):
     """Poll pipeline status. Returns completed_steps list for UI step indicator."""
-    if job_id not in _jobs:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
-    return JobStatus(**_jobs[job_id])
+    _validate_job_id(job_id)
+    job = _get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return JobStatus(**job)
 
 
 async def _sse_generator(job_id: str) -> AsyncGenerator[str, None]:
@@ -319,11 +383,11 @@ async def _sse_generator(job_id: str) -> AsyncGenerator[str, None]:
 
     waited = 0.0
     while waited < max_wait:
-        if job_id not in _jobs:
+        job = _get_job(job_id)
+        if job is None:
             yield f"event: error\ndata: {json.dumps({'error': 'job not found'})}\n\n"
             return
 
-        job = _jobs[job_id]
         completed = job.get("completed_steps", [])
 
         # Emit new step events
@@ -348,13 +412,15 @@ async def _sse_generator(job_id: str) -> AsyncGenerator[str, None]:
 
 
 @app.get("/rca/stream/{job_id}")
-async def stream_rca(job_id: str, _auth: None = Depends(verify_api_key)):
+@_rate_limit("20/minute")
+async def stream_rca(job_id: str, request: Request, _auth: None = Depends(verify_api_key)):
     """
     Server-Sent Events stream of per-step pipeline progress.
     Events: step (investigator/reasoner/critic/reporter complete), done, error, timeout.
     """
-    if job_id not in _jobs:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    _validate_job_id(job_id)
+    if _get_job(job_id) is None:
+        raise HTTPException(status_code=404, detail="Job not found")
     return StreamingResponse(
         _sse_generator(job_id),
         media_type="text/event-stream",

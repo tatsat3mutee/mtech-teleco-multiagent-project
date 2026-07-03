@@ -84,11 +84,43 @@ CREATE TABLE IF NOT EXISTS inferences (
     latency_ms    REAL,
     provider      TEXT,
     model         TEXT,
-    source        TEXT
+    source        TEXT,
+    investigator_ms REAL,
+    reasoner_ms   REAL,
+    critic_ms     REAL,
+    reporter_ms   REAL,
+    prompt_tokens INTEGER,
+    completion_tokens INTEGER,
+    review_required INTEGER
+);
+CREATE TABLE IF NOT EXISTS provider_events (
+    id            SERIAL PRIMARY KEY,
+    timestamp     TEXT    NOT NULL,
+    provider_group TEXT,
+    model         TEXT,
+    event         TEXT,
+    trace_name    TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_inferences_ts ON inferences(timestamp);
 CREATE INDEX IF NOT EXISTS idx_inferences_type ON inferences(anomaly_type);
 """
+
+
+def _q(sql: str) -> str:
+    """Convert '?' placeholders to '%s' for the PostgreSQL backend."""
+    return sql.replace("?", "%s") if _USE_PG else sql
+
+
+def _exec(conn, sql: str, params: tuple = ()):
+    """Execute a statement on either backend and return the cursor.
+
+    psycopg2 connections have no .execute(); sqlite3 connections do.
+    """
+    if _USE_PG:
+        cur = conn.cursor()
+        cur.execute(_q(sql), params)
+        return cur
+    return conn.execute(sql, params)
 
 
 def _conn():
@@ -149,8 +181,10 @@ def log_inference(
                 provider = provider or "unknown"
                 model = model or "unknown"
         st = stage_timings or {}
-        with _conn() as c:
-            c.execute(
+        conn = _conn()
+        try:
+            _exec(
+                conn,
                 """INSERT INTO inferences
                    (timestamp, anomaly_id, anomaly_type, severity, root_cause,
                     confidence, latency_ms, provider, model, source,
@@ -177,6 +211,9 @@ def log_inference(
                     (1 if review_required else 0) if review_required is not None else None,
                 ),
             )
+            conn.commit()
+        finally:
+            conn.close()
     except Exception as e:
         # Logging must never break inference
         print(f"[inference_log] write failed: {e}")
@@ -185,8 +222,10 @@ def log_inference(
 def log_provider_event(group: str, model: str, event: str, trace_name: str = "") -> None:
     """Record a provider success/rate_limit/timeout/error event. Best-effort."""
     try:
-        with _conn() as c:
-            c.execute(
+        conn = _conn()
+        try:
+            _exec(
+                conn,
                 "INSERT INTO provider_events (timestamp, provider_group, model, event, trace_name) "
                 "VALUES (?,?,?,?,?)",
                 (
@@ -194,6 +233,9 @@ def log_provider_event(group: str, model: str, event: str, trace_name: str = "")
                     str(group), str(model)[:120], str(event), str(trace_name)[:80],
                 ),
             )
+            conn.commit()
+        finally:
+            conn.close()
     except Exception as e:
         print(f"[inference_log] provider event write failed: {e}")
 
@@ -201,15 +243,19 @@ def log_provider_event(group: str, model: str, event: str, trace_name: str = "")
 def provider_stats():
     """Aggregate provider resilience stats for the dashboard."""
     try:
-        with _conn() as c:
-            rows = c.execute(
+        conn = _conn()
+        try:
+            rows = _exec(
+                conn,
                 "SELECT provider_group, event, COUNT(*) FROM provider_events "
-                "GROUP BY provider_group, event"
+                "GROUP BY provider_group, event",
             ).fetchall()
-            out: dict = {}
-            for group, event, n in rows:
-                out.setdefault(group, {})[event] = n
-            return out
+        finally:
+            conn.close()
+        out: dict = {}
+        for group, event, n in rows:
+            out.setdefault(group, {})[event] = n
+        return out
     except Exception as e:
         print(f"[inference_log] provider stats failed: {e}")
         return {}
@@ -218,13 +264,20 @@ def provider_stats():
 def fetch_recent(limit: int = 50):
     """Return most-recent N rows as list of dicts (for the dashboard view)."""
     try:
-        with _conn() as c:
-            c.row_factory = sqlite3.Row
-            rows = c.execute(
+        conn = _conn()
+        try:
+            if _USE_PG:
+                cur = _exec(conn, "SELECT * FROM inferences ORDER BY id DESC LIMIT ?", (int(limit),))
+                cols = [d[0] for d in cur.description]
+                return [dict(zip(cols, r)) for r in cur.fetchall()]
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
                 "SELECT * FROM inferences ORDER BY id DESC LIMIT ?",
                 (int(limit),),
             ).fetchall()
             return [dict(r) for r in rows]
+        finally:
+            conn.close()
     except Exception as e:
         print(f"[inference_log] read failed: {e}")
         return []
@@ -233,20 +286,24 @@ def fetch_recent(limit: int = 50):
 def stats():
     """Aggregate stats for the dashboard."""
     try:
-        with _conn() as c:
-            total = c.execute("SELECT COUNT(*) FROM inferences").fetchone()[0]
-            avg_lat = c.execute("SELECT AVG(latency_ms) FROM inferences").fetchone()[0]
-            by_type = c.execute(
+        conn = _conn()
+        try:
+            total = _exec(conn, "SELECT COUNT(*) FROM inferences").fetchone()[0]
+            avg_lat = _exec(conn, "SELECT AVG(latency_ms) FROM inferences").fetchone()[0]
+            by_type = _exec(
+                conn,
                 "SELECT anomaly_type, COUNT(*) AS n, AVG(latency_ms) AS lat "
-                "FROM inferences GROUP BY anomaly_type ORDER BY n DESC"
+                "FROM inferences GROUP BY anomaly_type ORDER BY n DESC",
             ).fetchall()
-            return {
-                "total": total,
-                "avg_latency_ms": avg_lat,
-                "by_type": [
-                    {"type": r[0], "count": r[1], "avg_latency_ms": r[2]} for r in by_type
-                ],
-            }
+        finally:
+            conn.close()
+        return {
+            "total": total,
+            "avg_latency_ms": avg_lat,
+            "by_type": [
+                {"type": r[0], "count": r[1], "avg_latency_ms": r[2]} for r in by_type
+            ],
+        }
     except Exception as e:
         print(f"[inference_log] stats failed: {e}")
         return {"total": 0, "avg_latency_ms": None, "by_type": []}

@@ -184,9 +184,10 @@ def call_llm(
             # Telemetry: accumulate token usage for the current pipeline run
             usage = getattr(resp, "usage", None)
             if usage is not None:
-                _USAGE_TOTALS["prompt_tokens"] += int(getattr(usage, "prompt_tokens", 0) or 0)
-                _USAGE_TOTALS["completion_tokens"] += int(getattr(usage, "completion_tokens", 0) or 0)
-                _USAGE_TOTALS["calls"] += 1
+                _accumulate_usage(
+                    int(getattr(usage, "prompt_tokens", 0) or 0),
+                    int(getattr(usage, "completion_tokens", 0) or 0),
+                )
             _log_provider_event(model_group, model_used, "success", trace_name)
             print(f"[LLM] model={model_used} trace={trace_name}")
             return content
@@ -198,17 +199,32 @@ def call_llm(
 
 
 # ── Telemetry helpers ───────────────────────────────────────────────────────
-_USAGE_TOTALS: dict = {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0}
+# ContextVar keeps token accounting isolated per pipeline run even when
+# multiple runs execute concurrently (FastAPI background tasks, threads).
+import contextvars
+
+_usage_ctx: contextvars.ContextVar = contextvars.ContextVar("llm_usage", default=None)
 
 
 def reset_usage() -> None:
-    """Reset the per-run token accumulator (call at pipeline start)."""
-    _USAGE_TOTALS.update({"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+    """Start a fresh token accumulator for the current context (pipeline run)."""
+    _usage_ctx.set({"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
 
 
 def get_usage() -> dict:
-    """Return a snapshot of tokens/calls accumulated since the last reset."""
-    return dict(_USAGE_TOTALS)
+    """Snapshot of tokens/calls accumulated in the current context since reset."""
+    usage = _usage_ctx.get()
+    return dict(usage) if usage else {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0}
+
+
+def _accumulate_usage(prompt_tokens: int, completion_tokens: int) -> None:
+    usage = _usage_ctx.get()
+    if usage is None:
+        usage = {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0}
+        _usage_ctx.set(usage)
+    usage["prompt_tokens"] += prompt_tokens
+    usage["completion_tokens"] += completion_tokens
+    usage["calls"] += 1
 
 
 def _classify_error(e: Exception) -> str:

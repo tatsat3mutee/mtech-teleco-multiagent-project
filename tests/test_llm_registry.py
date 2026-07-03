@@ -98,10 +98,13 @@ def test_litellm_model_string_format():
 
 
 def test_router_config_has_primary_slots():
-    """LITELLM_ROUTER_CONFIG must have 4 slots all aliased as 'primary'."""
+    """LITELLM_ROUTER_CONFIG must define both routing groups with valid slots."""
     from config import LITELLM_ROUTER_CONFIG
     assert len(LITELLM_ROUTER_CONFIG) == 4
+    groups = {slot["model_name"] for slot in LITELLM_ROUTER_CONFIG}
+    assert groups == {"groq-primary", "openrouter-fallback"}, (
+        f"unexpected router groups: {groups}"
+    )
     for slot in LITELLM_ROUTER_CONFIG:
-        assert slot["model_name"] == "primary"
         assert "model" in slot["litellm_params"]
         assert "/" in slot["litellm_params"]["model"]
