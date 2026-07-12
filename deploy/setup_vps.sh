@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Bootstrap script for Ubuntu 22.04 VPS (Hetzner CX21 / DigitalOcean Basic / Vultr 1GB)
+# Bootstrap script for Ubuntu 22.04 / 24.04 / 26.04 LTS
+# (Hetzner CX21 / DigitalOcean Basic / Vultr 1GB / AWS EC2)
 # Run as root: curl -sL <raw_url> | bash
 # Or: wget -qO- <raw_url> | bash
 set -euo pipefail
@@ -21,8 +22,19 @@ if ! command -v docker &>/dev/null; then
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
         | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
+
+    # Ubuntu codename (from os-release; always present). Docker's apt repo can
+    # lag brand-new Ubuntu releases (e.g. 26.04), so if the repo has no dist for
+    # this codename yet, fall back to the latest known-good LTS (noble / 24.04),
+    # whose packages are forward-compatible. This keeps first boot from aborting.
+    CODENAME="$(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")"
+    if ! curl -fsSL "https://download.docker.com/linux/ubuntu/dists/${CODENAME}/Release" >/dev/null 2>&1; then
+        echo "Docker repo has no '${CODENAME}' dist yet — falling back to 'noble'."
+        CODENAME="noble"
+    fi
+
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-        https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+        https://download.docker.com/linux/ubuntu ${CODENAME} stable" \
         > /etc/apt/sources.list.d/docker.list
     apt-get update -q
     apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
@@ -63,9 +75,10 @@ fi
 # ── 6. Firewall ─────────────────────────────────────────────────────
 ufw --force enable
 ufw allow ssh
-ufw allow 80/tcp    # Nginx HTTP (proxies to Streamlit + MLflow)
-ufw allow 8501/tcp  # Streamlit direct (optional, for debugging)
-ufw allow 5000/tcp  # MLflow direct (optional, restrict in production)
+ufw allow 80/tcp    # Caddy HTTP (ACME challenge + HTTP→HTTPS redirect)
+ufw allow 443/tcp   # Caddy HTTPS (both apps) — REQUIRED for the live site
+ufw allow 8501/tcp  # Streamlit direct (debug; AWS SG already restricts to your IP)
+ufw allow 5000/tcp  # MLflow direct (debug; AWS SG already restricts to your IP)
 echo "Firewall configured."
 
 # ── 7. systemd service ──────────────────────────────────────────────
