@@ -97,9 +97,13 @@ def get_router() -> _LiteLLMRouter:
                                           # instead of burning num_retries against a rate-limited
                                           # provider first (call_llm's outer loop remains as a
                                           # final safety net)
-            num_retries=1,        # 1 in-group retry — fallback group handles the rest
+            num_retries=2,        # enough retries to rotate across the 3 OpenRouter
+                                  # deployments when one is upstream-rate-limited
             retry_after=2,        # wait 2s before retry on 429
-            allowed_fails=2,      # skip a provider after 2 consecutive failures
+            allowed_fails=1,      # ONE 429 puts that deployment in cooldown immediately,
+                                  # so the retry picks a DIFFERENT model in the pool
+                                  # (observed: qwen3-coder:free 429 upstream while
+                                  # llama/gpt-oss were fine)
             cooldown_time=60,     # don't retry a failed provider for 60s
         )
     return _router
