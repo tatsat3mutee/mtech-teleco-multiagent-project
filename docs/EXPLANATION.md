@@ -116,7 +116,7 @@ Everything an auditor — or an examiner — could ask for is in the artifact it
 
 **Rate limits (lived problem → architecture).** An early Groq batch run hit the
 30 req/min cap and timed out. Fix: every LLM call goes through a LiteLLM Router
-capped *below* provider limits (Groq rpm=28/tpm=28K), with a least-busy fallback
+capped *below* provider limits (Groq rpm=28/tpm=7.5K), with a least-busy fallback
 pool of three OpenRouter free models, retries with backoff, and per-provider
 60-second circuit breakers. Model deprecations (it happened twice) are config
 edits, not code changes. Total failure of all providers degrades to

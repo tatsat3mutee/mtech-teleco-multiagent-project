@@ -205,7 +205,7 @@ inference dominates end-to-end latency (see `docs/VIVA_DEFENSE.md` §4 latency t
 
 ```mermaid
 flowchart LR
-    A["call_llm()"] --> G["groq-primary<br/>groq/openai/gpt-oss-120b<br/>rpm=28 · tpm=28,000"]
+    A["call_llm()"] --> G["groq-primary<br/>groq/openai/gpt-oss-120b<br/>rpm=28 · tpm=7,500"]
     G -->|"429 / fail / cooldown"| O["openrouter-fallback pool (least-busy)"]
     O --> O1["gpt-oss-120b:free · rpm=18"]
     O --> O2["llama-3.3-70b:free · rpm=18"]
@@ -215,7 +215,7 @@ flowchart LR
 
 | Control | Setting | Purpose |
 |---|---|---|
-| Groq rpm/tpm | 28 / 28,000 | Stay under Groq's 30/30K hard caps — **proactive**, not reactive |
+| Groq rpm/tpm | 28 / 7,500 | Stay under Groq's 30 rpm / 8,000 TPM caps (TPM cap **measured live** on the on-demand tier) — **proactive**, not reactive |
 | Routing strategy | `least-busy` | Spread fallback load across 3 free models |
 | Retries | `num_retries=3`, `retry_after=2s` | Absorb transient 429s |
 | Circuit breaker | `allowed_fails=2`, `cooldown_time=60s` | Stop hammering a failing provider |

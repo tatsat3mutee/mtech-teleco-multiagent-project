@@ -27,7 +27,10 @@
 > "Yes — and I hit it in practice, not just theory. An early one-shot Groq batch
 > timed out at their 30 req/min cap. The fix is architectural: all LLM traffic
 > goes through a LiteLLM Router configured *below* provider caps — Groq at
-> rpm=28/tpm=28,000 — so we shape traffic proactively instead of reacting to 429s.
+> rpm=28/tpm=7,500 — so we shape traffic proactively instead of reacting to 429s.
+> We even validated the fallback in production: a batch run on EC2 hit Groq's
+> real 8,000 TPM cap and the router failed over to OpenRouter mid-run —
+> zero pipelines failed, and we tightened the cap from the observed limit.
 > If Groq still fails, a least-busy pool of three OpenRouter free models takes
 > over (rpm=18 each), with 3 retries, 2-second backoff, and a 60-second circuit
 > breaker per provider. If *everything* fails, each agent has a deterministic
