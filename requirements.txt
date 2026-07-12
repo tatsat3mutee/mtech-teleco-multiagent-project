@@ -1,17 +1,18 @@
 # Core ML/Data
 pandas>=2.0.0,<3.0
-numpy>=1.24.0,<2.0
+numpy>=1.24.0,<3.0
 scikit-learn>=1.3.0,<2.0
 scipy>=1.11.0,<2.0
 matplotlib>=3.7.0,<4.0
 seaborn>=0.12.0,<1.0
 
 # LLM & Agents
-langchain>=0.2.0,<0.3
-langchain-community>=0.2.0,<0.3
-langchain-openai>=0.2.0,<0.3
+# NOTE: the pipeline uses langgraph (StateGraph) + litellm directly.
+# langchain-groq is an OPTIONAL judge fallback (lazy import in llm_judge.py);
+# it pulls langchain-core on its own. Do not re-add the langchain meta-package —
+# its core pins conflict with langchain-groq/langchain-openai 0.3+ resolvers.
+langgraph>=0.2.0,<2.0
 langchain-groq>=1.0.0  # optional fallback backend for judge
-langgraph>=0.2.0,<1.0
 openai>=1.40.0,<2.0
 litellm>=1.40.0,<2.0   # unified LLM router with auto-fallback + token tracking
 
