@@ -7,9 +7,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential git curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Python deps
+# Install Python deps.
+# torch is installed FIRST from the CPU-only index: sentence-transformers pulls
+# torch, and the default Linux wheel bundles ~6 GB of NVIDIA CUDA libraries that
+# are useless on CPU-only hosts (t3.medium has no GPU) and overflow a 30 GB disk
+# during image export. CPU wheel keeps the image ~3-4 GB total.
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
 COPY config.py .
