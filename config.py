@@ -225,5 +225,7 @@ ANOMALY_TYPE_THRESHOLDS = {
 }
 
 # ── MLflow ──
-MLFLOW_TRACKING_URI = "mlruns"
+# Env-first: docker-compose points at the MLflow server (http://mlflow:5000);
+# bare-metal/dev falls back to the local ./mlruns file store.
+MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "mlruns")
 MLFLOW_EXPERIMENT_NAME = "telecom_billing_rca"
