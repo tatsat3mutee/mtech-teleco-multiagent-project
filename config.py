@@ -95,8 +95,9 @@ LITELLM_ROUTER_CONFIG = [
             "model":   "groq/openai/gpt-oss-120b",
             "api_key": GROQ_API_KEY,
         },
-        "rpm": 28,    # stay under Groq's 30 req/min hard cap
-        "tpm": 28000, # stay under Groq's 30K tokens/min hard cap
+        "rpm": 28,   # stay under Groq's 30 req/min hard cap
+        "tpm": 7500, # observed live: gpt-oss-120b on-demand tier caps at 8,000 TPM
+                     # (429 on EC2, 2026-07-12) — throttle below it proactively
     },
     {
         "model_name": "openrouter-fallback",
