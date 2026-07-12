@@ -87,8 +87,17 @@ def get_router() -> _LiteLLMRouter:
     if _router is None:
         _router = _LiteLLMRouter(
             model_list=LITELLM_ROUTER_CONFIG,
-            routing_strategy="least-busy",
-            num_retries=3,
+            routing_strategy="usage-based-routing-v2",  # tracks rpm/tpm consumption per deployment
+            enable_pre_call_checks=True,  # ENFORCE the rpm/tpm caps before dispatch —
+                                          # without this, caps are advisory metadata and
+                                          # Groq's 8K TPM wall is hit reactively (observed on EC2)
+            fallbacks=[{"groq-primary": ["openrouter-fallback"]}],
+                                          # router-level failover: a 429 on Groq jumps to the
+                                          # OpenRouter pool inside the SAME completion call,
+                                          # instead of burning num_retries against a rate-limited
+                                          # provider first (call_llm's outer loop remains as a
+                                          # final safety net)
+            num_retries=1,        # 1 in-group retry — fallback group handles the rest
             retry_after=2,        # wait 2s before retry on 429
             allowed_fails=2,      # skip a provider after 2 consecutive failures
             cooldown_time=60,     # don't retry a failed provider for 60s
