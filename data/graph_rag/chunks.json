@@ -1,0 +1,1114 @@
+{
+  "c0000": {
+    "text": "# Billing Record Failure \u2014 RCA Playbook\n\n## Overview",
+    "metadata": {
+      "chunk_index": 0,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0001": {
+    "text": "# Billing Record Failure \u2014 RCA Playbook\n\n## Overview A billing record failure anomaly occurs when a customer's MonthlyCharges and/or TotalCharges contain NULL or NaN values, indicating that the billing pipeline failed to produce a complete charge record for the billing cycle. In the IBM Telco Customer Churn dataset, this anomaly is concentrated in customers with StreamingTV = 'Yes' OR StreamingMovies = 'Yes' \u2014 multi-service accounts whose bundle rating is more complex",
+    "metadata": {
+      "chunk_index": 1,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0002": {
+    "text": "es' \u2014 multi-service accounts whose bundle rating is more complex Accounts with tenure > 0 and NaN TotalCharges represent an active customer whose billing history has been interrupted.",
+    "metadata": {
+      "chunk_index": 2,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0003": {
+    "text": "t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for an account with tenure > 0\n- **Secondary:** StreamingTV = 'Yes' OR StreamingMovies = 'Yes' (streaming service accounts are disproportionately affected); InternetService = 'Fiber optic'\n- **Threshold:** IsolationForest treats NaN-filled (median-imputed) values as outliers with confidence > 0.88. SWARM routing: graph_first \u2014 billing system \u2192 ingestion pipeline \u2192 bundle rating engine is a multi-hop causal chain.",
+    "metadata": {
+      "chunk_index": 3,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0004": {
+    "text": "ion pipeline \u2192 bundle rating engine is a multi-hop causal chain. ## Common Root Causes",
+    "metadata": {
+      "chunk_index": 4,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0005": {
+    "text": "## Common Root Causes ### 1. Billing Record Ingestion Pipeline Timeout\n**Description:** The billing record ingestion pipeline timed out when processing a large batch of complex multi-service accounts, leaving incomplete records that were written to the billing database without charge values.",
+    "metadata": {
+      "chunk_index": 5,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0006": {
+    "text": "that were written to the billing database without charge values. **Indicators:** Multiple accounts show NaN charges on the same billing cycle date. Affected accounts share a common service bundle (e.g., StreamingTV + StreamingMovies + InternetService). Pipeline execution log shows timeout errors for the affected batch window.\n**Investigation Steps:**\n1. Check billing pipeline execution log for timeout errors on the affected date\n2. Identify all accounts in the failed batch \u2014 group by service bundle complexity",
+    "metadata": {
+      "chunk_index": 6,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0007": {
+    "text": "ccounts in the failed batch \u2014 group by service bundle complexity 3. Confirm that the incomplete records were written without charges (NaN vs. 0.0 distinction matters)\n4. Verify pipeline timeout configuration vs. actual processing time for complex bundles\n**Resolution:** Increase pipeline timeout for complex multi-service batches. Implement partial-batch retry: failed accounts are re-queued individually. Reprocess incomplete records for the affected cycle.",
+    "metadata": {
+      "chunk_index": 7,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0008": {
+    "text": "dividually. Reprocess incomplete records for the affected cycle. ### 2. Service Bundle Rating Failure\n**Description:** The rating engine failed to calculate charges for accounts with a specific service bundle combination (e.g., StreamingTV + StreamingMovies + Fiber optic internet) because the bundle rate configuration was incomplete or conflicting.",
+    "metadata": {
+      "chunk_index": 8,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0009": {
+    "text": "use the bundle rate configuration was incomplete or conflicting. **Indicators:** NaN charges are concentrated in accounts with specific service combinations. Other accounts on similar plans without the conflicting bundle combination were billed successfully. Bundle rate configuration log shows errors for the affected service combination.\n**Investigation Steps:**\n1. Group NaN-charge accounts by service bundle (StreamingTV \u00d7 StreamingMovies \u00d7 InternetService combinations)\n2. Check bundle rate configuration for the identified combination",
+    "metadata": {
+      "chunk_index": 9,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0010": {
+    "text": ". Check bundle rate configuration for the identified combination 3. Verify whether the bundle rate was recently modified or migrated\n4. Attempt manual rating calculation for a representative account to confirm the error\n**Resolution:** Fix the bundle rate configuration for the affected service combination. Reprocess billing for all accounts with that bundle. Add bundle rating integration test to the billing pipeline CI.",
+    "metadata": {
+      "chunk_index": 10,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0011": {
+    "text": ". Add bundle rating integration test to the billing pipeline CI. ### 3. Billing Cycle Batch Job Failure on Multi-Service Accounts\n**Description:** The end-of-cycle billing batch job failed partway through processing, and only accounts processed before the failure point have charge records. Multi-service accounts are typically processed later in the batch (sorted by service count) and are disproportionately affected.",
+    "metadata": {
+      "chunk_index": 11,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0012": {
+    "text": "h (sorted by service count) and are disproportionately affected. **Indicators:** Accounts without charge records all have higher service counts (multiple active services). The failure split correlates with a batch job error timestamp. Accounts processed before the error timestamp have complete records.\n**Investigation Steps:**\n1. Retrieve batch job execution log and identify the failure timestamp\n2. Extract all accounts processed after the failure timestamp \u2014 these have NaN charges\n3. Verify the failure cause (disk space, memory, network, database connection)",
+    "metadata": {
+      "chunk_index": 12,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0013": {
+    "text": "failure cause (disk space, memory, network, database connection) 4. Confirm the batch job has no checkpoint/resume capability (if not, full re-run needed)\n**Resolution:** Implement checkpoint-based resume for billing batch jobs. Fix the underlying failure cause. Re-run the batch from the checkpoint for all unprocessed accounts.",
+    "metadata": {
+      "chunk_index": 13,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0014": {
+    "text": "-run the batch from the checkpoint for all unprocessed accounts. ### 4. Data Pipeline NaN Propagation from Upstream Service Catalogue\n**Description:** An upstream service catalogue export contained NULL values for certain service attributes (e.g., StreamingTV rate = NULL), and the billing pipeline propagated these NULLs to the charge calculation output without validation.\n**Indicators:** NaN charges correlate with specific service SKUs. The service catalogue was recently updated. The NaN propagation follows the data lineage from catalogue \u2192 rating \u2192 billing record.",
+    "metadata": {
+      "chunk_index": 14,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0015": {
+    "text": "llows the data lineage from catalogue \u2192 rating \u2192 billing record. **Investigation Steps:**\n1. Check the service catalogue for NULL rate entries for the affected service SKUs\n2. Trace the data lineage: catalogue export \u2192 rating engine input \u2192 billing record output\n3. Verify whether the billing pipeline validates non-NULL rates before processing\n4. Identify the catalogue export that introduced the NULL values",
+    "metadata": {
+      "chunk_index": 15,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0016": {
+    "text": "4. Identify the catalogue export that introduced the NULL values **Resolution:** Add NULL validation at the billing pipeline input gate \u2014 reject records with NULL rates and route to a dead-letter queue for manual review. Fix the catalogue NULL entries. Reprocess affected accounts.",
+    "metadata": {
+      "chunk_index": 16,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0017": {
+    "text": "ew. Fix the catalogue NULL entries. Reprocess affected accounts. ## Severity Assessment",
+    "metadata": {
+      "chunk_index": 17,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0018": {
+    "text": "## Severity Assessment - **Revenue Impact:** HIGH \u2014 NaN charges mean zero revenue collection for affected accounts. Complex multi-service accounts typically have above-average MonthlyCharges (IBM Telco: streaming customers average $89/month vs. $65 overall).\n- **Customer Impact:** MEDIUM \u2014 customers with NaN charges may receive $0 bills (windfall) or error notices. Confusion causes support contacts.",
+    "metadata": {
+      "chunk_index": 18,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0019": {
+    "text": "(windfall) or error notices. Confusion causes support contacts. - **Detection Confidence:** NaN TotalCharges with tenure > 0 \u2192 IsolationForest confidence > 0.88. Streaming flag (StreamingTV or StreamingMovies = Yes) narrows the investigation to the correct account population.",
+    "metadata": {
+      "chunk_index": 19,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0020": {
+    "text": "es) narrows the investigation to the correct account population. ## Recommended Actions\n\n1. Identify all accounts with NaN charges in the current billing cycle \u2014 group by service bundle\n2. Determine whether the failure is pipeline-wide (batch failure) or bundle-specific (rating error)\n3. Reprocess billing records for all affected accounts after fixing the root cause\n4. Add MLflow alert: billing_record_failure_rate > 0.001 (0.1%) triggers escalation",
+    "metadata": {
+      "chunk_index": 20,
+      "total_chunks": 21,
+      "source": "cdr_failure_playbook.md"
+    }
+  },
+  "c0021": {
+    "text": "# Duplicate Charge \u2014 RCA Playbook\n\n## Overview",
+    "metadata": {
+      "chunk_index": 0,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0022": {
+    "text": "# Duplicate Charge \u2014 RCA Playbook\n\n## Overview A duplicate charge anomaly occurs when a customer is billed approximately 2\u00d7 their normal MonthlyCharges in a single billing cycle. In the IBM Telco Customer Churn dataset, affected customers have a median tenure of 45 months and are predominantly on Two-year contracts with Fiber optic service \u2014 long-term customers with stable charge history. Revenue impact: double charges damage trust, trigger disputes, and accelerate churn (IBM Telco churn rate is 2.3\u00d7 higher for customers who experience billing errors).",
+    "metadata": {
+      "chunk_index": 1,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0023": {
+    "text": "ate is 2.3\u00d7 higher for customers who experience billing errors). ## Detection Signals\n\n- **Primary:** MonthlyCharges \u2248 2\u00d7 the customer's historical average (TotalCharges \u00f7 tenure)\n- **Secondary:** Contract = 'Two year', InternetService = 'Fiber optic', high tenure (> 24 months)\n- **Threshold:** MonthlyCharges > 200% of (TotalCharges / tenure) ratio \u2192 IsolationForest confidence > 0.85\n\n## Common Root Causes",
+    "metadata": {
+      "chunk_index": 2,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0024": {
+    "text": "ratio \u2192 IsolationForest confidence > 0.85\n\n## Common Root Causes ### 1. Billing System Retry Logic \u2014 Duplicate Charge Posting\n**Description:** The billing engine's retry logic lacks idempotency \u2014 a failed charge posting is retried, and both the original and retry succeed, posting two charges for one billing cycle.\n**Indicators:** Two separate charge transactions with the same billing period in the payment system. MonthlyCharges exactly 2\u00d7 the previous month. Appears in batch processing logs as \"charge posted \u2014 retry succeeded.\"\n**Investigation Steps:**",
+    "metadata": {
+      "chunk_index": 3,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0025": {
+    "text": "s as \"charge posted \u2014 retry succeeded.\"\n**Investigation Steps:** 1. Query payment transaction records for duplicate billing period entries\n2. Check billing retry configuration \u2014 verify idempotency key usage\n3. Review batch processing logs for double-post entries on the affected accounts\n4. Identify whether the issue occurs system-wide or only during high-load periods\n**Resolution:** Add idempotency keys to all charge posting operations. Reverse the duplicate charge immediately. Audit the last 3 billing cycles for similar duplicates.",
+    "metadata": {
+      "chunk_index": 4,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0026": {
+    "text": "diately. Audit the last 3 billing cycles for similar duplicates. ### 2. Billing Batch Job Re-Run Without Deduplication\n**Description:** A billing batch job failed midway through a cycle and was re-run from the beginning \u2014 posting charges for accounts that were already successfully billed in the first run.\n**Indicators:** Multiple accounts show duplicates on the same date. The issue correlates with a batch failure/restart event in the job execution log.\n**Investigation Steps:**\n1. Check billing batch execution log for failure and restart events",
+    "metadata": {
+      "chunk_index": 5,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0027": {
+    "text": "Check billing batch execution log for failure and restart events 2. Identify all accounts billed in the first run vs. the restart run\n3. Compare charge timestamps to confirm overlap\n4. Verify whether the batch job has checkpoint/resume capability\n**Resolution:** Implement checkpoint-based resume for billing batch jobs. Add pre-billing deduplication check: if MonthlyCharges already posted for this cycle, skip. Reverse all duplicate charges from the restart run.",
+    "metadata": {
+      "chunk_index": 6,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0028": {
+    "text": "cycle, skip. Reverse all duplicate charges from the restart run. ### 3. Payment Processing Idempotency Failure\n**Description:** The payment processor's idempotency mechanism failed \u2014 the same charge request was processed twice because the idempotency key expired or was not properly stored.\n**Indicators:** Payment processor logs show two successful authorisations with the same merchant reference. MonthlyCharges = 2\u00d7 expected for a single account (not batch-wide).\n**Investigation Steps:**",
+    "metadata": {
+      "chunk_index": 7,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0029": {
+    "text": "for a single account (not batch-wide).\n**Investigation Steps:** 1. Query payment processor for duplicate authorisations within the same billing period\n2. Check idempotency key TTL configuration vs. charge processing time\n3. Review network timeout behaviour between billing engine and payment processor\n4. Assess whether the issue is isolated to specific payment methods\n**Resolution:** Extend idempotency key TTL beyond maximum charge processing time. Implement payment reconciliation job comparing billing records to payment processor records daily.",
+    "metadata": {
+      "chunk_index": 8,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0030": {
+    "text": "ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediate billing mediation layer re-transmitted already-processed billing records due to a delivery acknowledgement failure, causing the rating engine to process them twice.\n**Indicators:** The same usage record appears twice in the rating engine's input queue with identical timestamps. MonthlyCharges = 2\u00d7 normal specifically for customers with complex service bundles.\n**Investigation Steps:**",
+    "metadata": {
+      "chunk_index": 9,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0031": {
+    "text": "customers with complex service bundles.\n**Investigation Steps:** 1. Check the mediation layer's delivery acknowledgement logs\n2. Compare rating engine input queue to mediation layer output for duplicates\n3. Review which service types (StreamingTV, MultipleLines) are most affected\n4. Verify exactly-once delivery semantics in the mediation layer configuration\n**Resolution:** Enable exactly-once delivery semantics. Add duplicate detection at the rating engine input gate. Purge duplicate entries and reprocess correct records.",
+    "metadata": {
+      "chunk_index": 10,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0032": {
+    "text": "put gate. Purge duplicate entries and reprocess correct records. ## Severity Assessment\n\n- **Revenue Impact:** HIGH \u2014 double charges create refund obligations and dispute costs. IBM Telco data shows churn rate increases 2.3\u00d7 after billing errors.\n- **Customer Impact:** HIGH \u2014 financial harm to customer; likely to trigger complaints, disputes, and churn.\n- **Detection Confidence:** MonthlyCharges > 1.8\u00d7 historical average \u2192 IsolationForest confidence > 0.85. High precision at this threshold.\n\n## Recommended Actions",
+    "metadata": {
+      "chunk_index": 11,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0033": {
+    "text": "0.85. High precision at this threshold.\n\n## Recommended Actions 1. Immediately reverse the duplicate charge and notify the customer\n2. Audit the billing batch execution log for the affected cycle to identify scope\n3. Implement idempotency keys on all charge posting operations\n4. Add MLflow alert: duplicate_charge_rate > 0.001 (0.1%) triggers escalation",
+    "metadata": {
+      "chunk_index": 12,
+      "total_chunks": 13,
+      "source": "duplicate_charge_playbook.md"
+    }
+  },
+  "c0034": {
+    "text": "# Incident Response Framework for Billing Anomalies\n\n## Incident Classification",
+    "metadata": {
+      "chunk_index": 0,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0035": {
+    "text": "onse Framework for Billing Anomalies\n\n## Incident Classification ### Severity Levels\n| Level | Description | Response Time | IBM Telco Examples |\n|-------|-------------|---------------|-------------------|\n| P1 - Critical | Billing system failure affecting >10% of accounts | 15 minutes | Zero-billing across all Fiber optic accounts; mass duplicate charges on billing cycle date |\n| P2 - High | Billing error affecting specific customer segment | 1 hour | Zero-billing for all Two-year contract customers; SLA breach for enterprise accounts |",
+    "metadata": {
+      "chunk_index": 1,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0036": {
+    "text": "wo-year contract customers; SLA breach for enterprise accounts | | P3 - Medium | Isolated anomaly, limited customer impact | 4 hours | Individual usage spike (single account, tenure > 18 months); single billing record failure |\n| P4 - Low | Minor billing discrepancy, no immediate revenue impact | 24 hours | Marginal charge rounding on Month-to-month accounts |",
+    "metadata": {
+      "chunk_index": 2,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0037": {
+    "text": "24 hours | Marginal charge rounding on Month-to-month accounts | ## Anomaly Detection Pipeline\n\n### IsolationForest Confidence Score Interpretation\nThe multi-agent RCA pipeline uses IsolationForest anomaly scores as the primary triage signal:",
+    "metadata": {
+      "chunk_index": 3,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0038": {
+    "text": "ses IsolationForest anomaly scores as the primary triage signal: | Confidence Score | Severity | Action |\n|-----------------|----------|--------|\n| \u2265 0.90 | P1/P2 | Immediate escalation; SWARM routing to graph_first retrieval |\n| 0.75 \u2013 0.89 | P2/P3 | Investigator agent activated; vector_first retrieval |\n| 0.60 \u2013 0.74 | P3 | Reasoner reviews; critic validation required |\n| < 0.60 | P4 | Logged; no immediate action |",
+    "metadata": {
+      "chunk_index": 4,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0039": {
+    "text": "idation required |\n| < 0.60 | P4 | Logged; no immediate action | ### Rule-Based Prefilter\n`rule_based_prefilter(df)` runs before IsolationForest:\n- Flags MonthlyCharges = 0 AND tenure > 0 at 100% precision \u2192 immediate P2 escalation\n- These deterministic violations bypass confidence scoring and go directly to the investigator agent\n\n## Root Cause Analysis (RCA) Methodology",
+    "metadata": {
+      "chunk_index": 5,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0040": {
+    "text": "the investigator agent\n\n## Root Cause Analysis (RCA) Methodology ### Step 1: Anomaly Characterization\n- What is the anomaly type? (zero_billing, duplicate_charge, usage_spike, billing_record_failure, sla_breach)\n- How many accounts are affected? (single account vs. cohort vs. segment-wide)\n- What is the time window? (single billing cycle vs. recurring)\n- What is the estimated revenue impact? (MonthlyCharges \u00d7 affected accounts)\n- IBM Telco feature context: tenure, InternetService, Contract, StreamingTV/StreamingMovies",
+    "metadata": {
+      "chunk_index": 6,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0041": {
+    "text": ": tenure, InternetService, Contract, StreamingTV/StreamingMovies ### Step 2: SWARM Routing Decision\nThe SWARM router selects the retrieval strategy before any LLM call:\n- `graph_first`: zero_billing, billing_record_failure \u2014 multi-hop causal chains through billing system graph\n- `vector_first`: duplicate_charge, usage_spike, sla_breach \u2014 pattern matching against playbook evidence\n\nThe routing explanation is logged to `state[\"routing_explanation\"]` for audit and UI display.",
+    "metadata": {
+      "chunk_index": 7,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0042": {
+    "text": "gged to `state[\"routing_explanation\"]` for audit and UI display. ### Step 3: Evidence Collection\n- Retrieve top-k documents from knowledge base using the chosen retrieval strategy\n- IsolationForest anomaly score and detected feature values\n- IBM Telco fields: MonthlyCharges, TotalCharges, tenure, Contract, InternetService, streaming flags\n- Change management records for the relevant billing cycle date",
+    "metadata": {
+      "chunk_index": 8,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0043": {
+    "text": "- Change management records for the relevant billing cycle date ### Step 4: Hypothesis Generation (Reasoner Agent)\nHypotheses are grounded in retrieved playbook evidence. Each hypothesis must include:\n- Root cause description referencing IBM Telco feature signals\n- Supporting evidence citations: `[source: playbook_filename.md, section: Root Cause X]`\n- Confidence assessment based on evidence quality\n- INSUFFICIENT EVIDENCE declaration if fewer than 2 supporting documents retrieved",
+    "metadata": {
+      "chunk_index": 9,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0044": {
+    "text": "DENCE declaration if fewer than 2 supporting documents retrieved ### Step 5: Hypothesis Validation (Critic Agent)\n- Verify each hypothesis against retrieved evidence \u2014 no unsupported claims\n- Check for alternative explanations not yet considered\n- Assess whether the recommended action matches the root cause\n- Flag for revision if evidence grounding score < 0.70",
+    "metadata": {
+      "chunk_index": 10,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0045": {
+    "text": "oot cause\n- Flag for revision if evidence grounding score < 0.70 ### Step 6: Resolution (Reporter Agent)\n- Generate structured RCA report with anomaly context, root cause, evidence, and recommended action\n- Include account-level context: tenure bucket, contract type, service configuration\n- Specify reprocessing scope: single account vs. billing cycle vs. customer cohort",
+    "metadata": {
+      "chunk_index": 11,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0046": {
+    "text": "sing scope: single account vs. billing cycle vs. customer cohort ### Step 7: Prevention\n- Add monitoring threshold: IsolationForest anomaly rate > 1% triggers P2 alert\n- Update playbooks with new failure mode patterns\n- Log all confirmed root causes to MLflow for ablation analysis\n\n## Escalation Matrix",
+    "metadata": {
+      "chunk_index": 12,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0047": {
+    "text": "oot causes to MLflow for ablation analysis\n\n## Escalation Matrix | Condition | Escalation Target | Action |\n|-----------|-------------------|--------|\n| Revenue impact > $10K (MonthlyCharges \u00d7 affected accounts) | Revenue Assurance Manager | Immediate notification |\n| >500 accounts affected in one billing cycle | VP Operations | Incident bridge activation |\n| Contract customer (One year / Two year) overbilled | Account Management | Direct customer notification |\n| Zero-billing rate > 0.5% of active accounts | Billing Platform Engineering | Pipeline health check |",
+    "metadata": {
+      "chunk_index": 13,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0048": {
+    "text": "ccounts | Billing Platform Engineering | Pipeline health check | | Duplicate charge rate > 0.01% | Billing Engineering | Idempotency audit |",
+    "metadata": {
+      "chunk_index": 14,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0049": {
+    "text": "charge rate > 0.01% | Billing Engineering | Idempotency audit | ## Mean Time to Resolution (MTTR) Targets\n- P1: MTTR < 2 hours\n- P2: MTTR < 8 hours\n- P3: MTTR < 24 hours\n- P4: MTTR < 72 hours\n\n## Common Resolution Patterns\n\n### Pattern: Billing Record Reprocessing\nTrigger: Missing charges (zero_billing) or null charges (billing_record_failure)\nSteps: Identify failed batch window \u2192 fix root cause (config or pipeline) \u2192 reprocess affected accounts \u2192 validate MonthlyCharges are non-zero \u2192 notify accounts",
+    "metadata": {
+      "chunk_index": 15,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0050": {
+    "text": "ccounts \u2192 validate MonthlyCharges are non-zero \u2192 notify accounts ### Pattern: Duplicate Charge Reversal\nTrigger: MonthlyCharges \u2248 2\u00d7 historical average\nSteps: Identify duplicate charge components \u2192 reverse excess charges \u2192 fix idempotency logic \u2192 reprocess \u2192 validate via TotalCharges/tenure consistency check\n\n### Pattern: Contract Rate Correction\nTrigger: SLA breach (MonthlyCharges > P95 \u00d7 1.5 for contract customers)\nSteps: Pull contract rate from CRM \u2192 fix billing configuration \u2192 reprocess from overcharge start date \u2192 issue refund \u2192 notify account management",
+    "metadata": {
+      "chunk_index": 16,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0051": {
+    "text": "overcharge start date \u2192 issue refund \u2192 notify account management ### Pattern: Rate Card Reset\nTrigger: Usage spike (MonthlyCharges 5\u201310\u00d7 baseline for Fiber optic / streaming customers)\nSteps: Identify incorrect rate rule \u2192 revert to standard rate \u2192 reprocess affected billing cycle \u2192 verify charges return to normal band\n\n## Source\n[incident_response, rca_methodology, isolationforest, swarm_routing, billing_anomaly, escalation]",
+    "metadata": {
+      "chunk_index": 17,
+      "total_chunks": 18,
+      "source": "incident_response_framework.md"
+    }
+  },
+  "c0052": {
+    "text": "# Revenue Assurance \u2014 IBM Telco Billing Dataset\n\n## Overview",
+    "metadata": {
+      "chunk_index": 0,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0053": {
+    "text": "# Revenue Assurance \u2014 IBM Telco Billing Dataset\n\n## Overview Revenue assurance ensures that all active customer services are accurately reflected in billing records and that MonthlyCharges are consistent with service tier, contract type, and tenure history. The IBM Telco Customer Churn dataset (7,043 customers, 21 columns) provides the ground truth for expected charge ranges by service configuration",
+    "metadata": {
+      "chunk_index": 1,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0054": {
+    "text": "ground truth for expected charge ranges by service configuration TM Forum estimates telecom operators lose 1\u20135% of annual revenue to billing leakage \u2014 this system targets detection of that leakage before it compounds over multiple billing cycles.",
+    "metadata": {
+      "chunk_index": 2,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0055": {
+    "text": "f that leakage before it compounds over multiple billing cycles. ## IBM Telco Charge Distribution Benchmarks\n\n| Segment | Median MonthlyCharges | P95 MonthlyCharges | Expected tenure range |\n|---------|----------------------|-------------------|----------------------|\n| No InternetService | $22.10 | $29.85 | 0\u201372 months |\n| DSL | $53.20 | $79.40 | 0\u201372 months |\n| Fiber optic | $89.30 | $107.40 | 0\u201372 months |\n| Fiber optic + StreamingTV + StreamingMovies | $99.45 | $113.75 | 6\u201372 months |",
+    "metadata": {
+      "chunk_index": 3,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0056": {
+    "text": "StreamingTV + StreamingMovies | $99.45 | $113.75 | 6\u201372 months | TotalCharges / tenure (months) should fall within \u00b120% of the cohort median for accounts with tenure > 6 months. Significant deviation is the primary revenue assurance signal.\n\n## Revenue Leakage Categories",
+    "metadata": {
+      "chunk_index": 4,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0057": {
+    "text": "primary revenue assurance signal.\n\n## Revenue Leakage Categories ### 1. Zero-Billing Leakage\nActive accounts (tenure > 0, services provisioned) generating MonthlyCharges = $0. This represents 100% charge leakage for the affected cycle. `rule_based_prefilter()` catches this at 100% precision before IsolationForest scoring.\n- **IBM Telco prevalence:** Rare (<0.1% of accounts) but high-value (Fiber optic zero-billing accounts average $89.30/month in lost revenue)\n- **Trajectory signal:** TotalCharges stops increasing while tenure continues to increment",
+    "metadata": {
+      "chunk_index": 5,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0058": {
+    "text": "otalCharges stops increasing while tenure continues to increment ### 2. Bundle Rating Leakage\nStreaming bundle customers (StreamingTV='Yes' OR StreamingMovies='Yes') with NaN or $0 MonthlyCharges. Bundle rating leakage is more common than simple zero-billing because multi-component rating has more failure modes.\n- **IBM Telco prevalence:** Streaming customers = 38.4% of the dataset; bundle rating failures affect this population disproportionately\n- **Trajectory signal:** TotalCharges / tenure ratio drops below 0.6\u00d7 the segment median",
+    "metadata": {
+      "chunk_index": 6,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0059": {
+    "text": "TotalCharges / tenure ratio drops below 0.6\u00d7 the segment median ### 3. Underrating Leakage\nMonthlyCharges below expected range for the customer's service tier and contract. May indicate rate table misconfiguration or incorrect plan assignment.\n- **IBM Telco signal:** MonthlyCharges < P5 for the InternetService \u00d7 Contract cohort\n- **Detection:** IsolationForest flags outliers on the lower tail; charges_per_month feature detects chronic undercharging",
+    "metadata": {
+      "chunk_index": 7,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0060": {
+    "text": "er tail; charges_per_month feature detects chronic undercharging ### 4. Collection Leakage\nBilled amount not collected due to payment processing failures. PaymentMethod = 'Electronic check' accounts in the IBM Telco dataset have the highest churn rate (45.3%), suggesting this group also has the highest payment failure rate.\n- **Signal:** TotalCharges growth stalls relative to MonthlyCharges \u00d7 tenure (billed but not collected)\n- **Action:** Aging analysis of accounts receivable by PaymentMethod\n\n## Anomaly Detection Methods",
+    "metadata": {
+      "chunk_index": 8,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0061": {
+    "text": "counts receivable by PaymentMethod\n\n## Anomaly Detection Methods ### Primary: IsolationForest\n- **Features:** tenure, MonthlyCharges, TotalCharges, charges_per_month (= TotalCharges/tenure), monthly_total_ratio (= MonthlyCharges/(TotalCharges+1))\n- **Configuration:** contamination=0.05 (5% expected anomaly rate), n_estimators=100, random_state=RANDOM_SEED\n- **Output:** anomaly score in [-1, 0]; normalised to [0, 1] confidence; scores > 0.75 trigger investigator agent",
+    "metadata": {
+      "chunk_index": 9,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0062": {
+    "text": "d to [0, 1] confidence; scores > 0.75 trigger investigator agent ### Secondary: Rule-Based Prefilter\n- Deterministic fast path: flags MonthlyCharges = 0 AND tenure > 0 \u2192 `rule_flag = 1`\n- Runs before IsolationForest; overrides confidence score for this pattern\n- Zero false negatives for the zero-billing case",
+    "metadata": {
+      "chunk_index": 10,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0063": {
+    "text": "or this pattern\n- Zero false negatives for the zero-billing case ### Deprecated: DBSCAN\n- DBSCAN was previously used as a secondary detector\n- Deprecated in v0.1 \u2014 density-based clustering is unsuitable for sparse, mixed-type billing features\n- IsolationForest + rule-based prefilter achieves better precision/recall on IBM Telco data\n- `DBSCANAnomalyDetector` class is retained with DeprecationWarning for backward compatibility only\n\n## MonthlyCharges Trend Analysis\n\nRevenue assurance monitors the following trends for early leakage detection:",
+    "metadata": {
+      "chunk_index": 11,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0064": {
+    "text": "rance monitors the following trends for early leakage detection: ### Charge Consistency Check\n`charges_per_month = TotalCharges / tenure` should remain approximately constant for stable accounts. A sudden drop in `charges_per_month` indicates recent zero-billing or underrating.\n- Normal range: within \u00b115% of account's own trailing 6-cycle average\n- Anomaly threshold: > \u00b130% deviation \u2192 flag for review",
+    "metadata": {
+      "chunk_index": 12,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0065": {
+    "text": "average\n- Anomaly threshold: > \u00b130% deviation \u2192 flag for review ### Churn Correlation with Billing Errors\nIBM Telco dataset analysis:\n- Customers with billing anomalies churn at 2.1\u20133.2\u00d7 the baseline rate (26.5%)\n- Zero-billing anomalies: 2.8\u00d7 churn rate (confusion and loss of service trust)\n- Duplicate charges: 3.2\u00d7 churn rate (strongest predictor)\n- SLA breaches: 3.1\u00d7 churn rate (contract violation drives departure)\n- Usage spikes: 2.4\u00d7 churn rate (bill shock effect)\n\nEarly billing anomaly detection therefore has dual value: revenue recovery + churn prevention.",
+    "metadata": {
+      "chunk_index": 13,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0066": {
+    "text": "n therefore has dual value: revenue recovery + churn prevention. ## Key Revenue Assurance Controls\n\n### 1. Billing Completeness Check\n- All active accounts (tenure > 0) must have non-null, non-zero MonthlyCharges each cycle\n- Streaming accounts (StreamingTV='Yes' OR StreamingMovies='Yes') must have MonthlyCharges \u2265 InternetService base rate\n- Frequency: per billing cycle; automated via `rule_based_prefilter`",
+    "metadata": {
+      "chunk_index": 14,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0067": {
+    "text": "equency: per billing cycle; automated via `rule_based_prefilter` ### 2. Charge Trajectory Audit\n- TotalCharges / tenure deviation > 30% from account's own average \u2192 flag for IsolationForest review\n- Segment benchmarks (table above) used for new accounts with tenure < 6 months\n- Frequency: daily rolling calculation",
+    "metadata": {
+      "chunk_index": 15,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0068": {
+    "text": "ts with tenure < 6 months\n- Frequency: daily rolling calculation ### 3. Contract Rate Compliance\n- One year and Two year contract customers: MonthlyCharges must not exceed P95 \u00d7 1.5\n- Month-to-month customers: MonthlyCharges > P99 triggers usage_spike review (variable pricing \u2014 higher threshold)\n- Frequency: per billing cycle; IsolationForest + SWARM vector_first routing",
+    "metadata": {
+      "chunk_index": 16,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0069": {
+    "text": "per billing cycle; IsolationForest + SWARM vector_first routing ### 4. Duplicate Charge Detection\n- TotalCharges / tenure ratio spikes > 1.9\u00d7 expected in single cycle \u2192 duplicate_charge flag\n- Cross-reference against retry logs for the affected billing cycle\n- Frequency: per cycle; IsolationForest monthly_total_ratio feature\n\n## Industry Benchmarks",
+    "metadata": {
+      "chunk_index": 17,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0070": {
+    "text": "lationForest monthly_total_ratio feature\n\n## Industry Benchmarks | Metric | Best-in-Class | Industry Average | Poor |\n|--------|--------------|------------------|------|\n| Revenue Leakage | <0.5% | 1\u20133% | >5% |\n| Billing Accuracy | >99.8% | 99.0\u201399.5% | <99% |\n| Billing Record Completeness | >99.99% | 99.5\u201399.9% | <99.5% |\n| MTTR (Billing Anomalies) | <2 hours | 4\u20138 hours | >24 hours |\n| Churn Rate (billing-error cohort) | <30% | 40\u201355% | >65% |",
+    "metadata": {
+      "chunk_index": 18,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0071": {
+    "text": "s |\n| Churn Rate (billing-error cohort) | <30% | 40\u201355% | >65% | ## Source\n[revenue_assurance, ibm_telco, isolationforest, rule_based_prefilter, monthly_charges, total_charges, churn_correlation, billing_completeness]",
+    "metadata": {
+      "chunk_index": 19,
+      "total_chunks": 20,
+      "source": "revenue_assurance.md"
+    }
+  },
+  "c0072": {
+    "text": "# SLA Breach \u2014 RCA Playbook\n\n## Overview",
+    "metadata": {
+      "chunk_index": 0,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0073": {
+    "text": "# SLA Breach \u2014 RCA Playbook\n\n## Overview An SLA breach anomaly occurs when a customer's MonthlyCharges significantly exceed the contractual billing cap for their service tier. In the IBM Telco Customer Churn dataset, SLA breaches are concentrated in customers with Contract = 'One year' or 'Two year' \u2014 these accounts have explicit rate commitments and billing caps that must be enforced. The detection signal is MonthlyCharges > P95 \u00d7 1.5 for the customer's contract cohort AND Contract != 'Month-to-month'",
+    "metadata": {
+      "chunk_index": 1,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0074": {
+    "text": "the customer's contract cohort AND Contract != 'Month-to-month' Month-to-month customers are excluded because their pricing is variable by design. Revenue impact: overbilled customers file disputes, churn at 3.2\u00d7 the baseline rate, and incur penalty obligations.",
+    "metadata": {
+      "chunk_index": 2,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0075": {
+    "text": "churn at 3.2\u00d7 the baseline rate, and incur penalty obligations. ## Detection Signals",
+    "metadata": {
+      "chunk_index": 3,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0076": {
+    "text": "## Detection Signals - **Primary:** MonthlyCharges > P95_cohort \u00d7 1.5 AND Contract \u2208 {'One year', 'Two year'}\n- **Secondary:** tenure > 12 months (customers with established charge history); TotalCharges / tenure ratio > 1.5\u00d7 the plan average\n- **IBM Telco Threshold:** P95 of MonthlyCharges is $107.40 for Fiber optic + Two-year contract customers; breach threshold = $161.10. IsolationForest anomaly score < -0.18 with confidence > 0.84.",
+    "metadata": {
+      "chunk_index": 4,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0077": {
+    "text": "0. IsolationForest anomaly score < -0.18 with confidence > 0.84. - **SWARM Routing:** vector_first \u2014 pattern matching against contract rate rules in the knowledge base.",
+    "metadata": {
+      "chunk_index": 5,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0078": {
+    "text": "tern matching against contract rate rules in the knowledge base. ## Common Root Causes",
+    "metadata": {
+      "chunk_index": 6,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0079": {
+    "text": "## Common Root Causes ### 1. Rate Plan Not Reflected in Billing Configuration\n**Description:** The customer's contracted rate ceiling was not correctly entered into the billing configuration when the contract was created or renewed. The billing engine applies a higher default rate instead of the negotiated contract rate.",
+    "metadata": {
+      "chunk_index": 7,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0080": {
+    "text": "s a higher default rate instead of the negotiated contract rate. **IBM Telco Indicators:** MonthlyCharges > contractual cap since contract start date; TotalCharges / tenure shows consistent overbilling from account creation; Contract = 'Two year' with MonthlyCharges in the top 1% of the same plan cohort.\n**Investigation Steps:**\n1. Pull contract terms from CRM \u2014 identify negotiated rate ceiling and plan code\n2. Check billing configuration for the customer's plan code \u2014 verify rate cap field\n3. Compare the configured rate with the contractual rate",
+    "metadata": {
+      "chunk_index": 8,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0081": {
+    "text": "p field\n3. Compare the configured rate with the contractual rate 4. Check configuration change log for the contract activation date\n**Resolution:** Update billing configuration with correct contracted rate; reprocess all billing cycles from contract start date; issue refund for total overcharge amount.",
+    "metadata": {
+      "chunk_index": 9,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0082": {
+    "text": "m contract start date; issue refund for total overcharge amount. ### 2. Contract Renewal Billing Error\n**Description:** At contract renewal, the old plan's billing cap was deactivated before the new plan's configuration was activated. During the gap, default uncapped rates were applied, generating charges above the new contract ceiling.\n**IBM Telco Indicators:** MonthlyCharges spike exactly at contract renewal month; pre-renewal charges were within bounds; tenure > 24 months (established account at renewal time); Contract recently changed from 'One year' to 'Two year'.",
+    "metadata": {
+      "chunk_index": 10,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0083": {
+    "text": "time); Contract recently changed from 'One year' to 'Two year'. **Investigation Steps:**\n1. Check contract history for renewal event timestamp\n2. Identify the gap between old plan deactivation and new plan activation\n3. Retrieve the default rates applied during the gap window\n4. Calculate overcharge: actual charges minus contracted rate \u00d7 affected months\n**Resolution:** Apply new contract rate retroactively to gap window; issue credit for gap-period overcharges; fix renewal workflow to eliminate configuration gap.",
+    "metadata": {
+      "chunk_index": 11,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0084": {
+    "text": "vercharges; fix renewal workflow to eliminate configuration gap. ### 3. Plan Migration Proration Error\n**Description:** A mid-cycle plan migration incorrectly prorated charges, double-applying both the old and new plan's monthly fees in the transition cycle. The combined amount exceeds the new plan's contractual ceiling.",
+    "metadata": {
+      "chunk_index": 12,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0085": {
+    "text": "The combined amount exceeds the new plan's contractual ceiling. **IBM Telco Indicators:** MonthlyCharges = approximately (old_monthly + new_monthly) in the transition month; TotalCharges shows a single anomalous month within an otherwise consistent billing pattern; InternetService or streaming tier changed in the same cycle.\n**Investigation Steps:**\n1. Pull billing detail for the transition cycle \u2014 identify double-charge components\n2. Check plan migration timestamp vs. billing cycle boundary",
+    "metadata": {
+      "chunk_index": 13,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0086": {
+    "text": "nts\n2. Check plan migration timestamp vs. billing cycle boundary 3. Verify proration calculation: should be (days on old plan / days in cycle) \u00d7 old_rate + (days on new plan / days in cycle) \u00d7 new_rate\n4. Confirm whether both full monthly charges or prorated amounts were applied\n**Resolution:** Reverse the duplicate full-month charge; apply correct prorated amounts; fix proration logic in the plan migration workflow.",
+    "metadata": {
+      "chunk_index": 14,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0087": {
+    "text": "ted amounts; fix proration logic in the plan migration workflow. ### 4. Streaming Service Tier Misclassification at Billing\n**Description:** Streaming services (StreamingTV, StreamingMovies) were reclassified to a premium tier during a rate table update, causing the combined service bundle to exceed the base plan's contracted ceiling. The customer's contract rate was for the standard streaming tier.",
+    "metadata": {
+      "chunk_index": 15,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0088": {
+    "text": "he customer's contract rate was for the standard streaming tier. **IBM Telco Indicators:** MonthlyCharges increase correlates with a rate table update event; streaming customers (StreamingTV='Yes' OR StreamingMovies='Yes') are disproportionately affected; non-streaming customers on the same base plan are within bounds; Contract = 'Two year' (price-protected accounts most visibly impacted).\n**Investigation Steps:**\n1. Identify the rate table update timestamp and which streaming tiers were modified\n2. Compare streaming charge components before and after the rate update",
+    "metadata": {
+      "chunk_index": 16,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0089": {
+    "text": "are streaming charge components before and after the rate update 3. Verify the customer's contract: did it specify a locked streaming rate?\n4. Assess the scope \u2014 how many Two-year streaming customers are affected?\n**Resolution:** Revert streaming tier to contracted rate; reprocess billing from rate table change date; issue corrective bills and credits to all affected accounts.",
+    "metadata": {
+      "chunk_index": 17,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0090": {
+    "text": "te; issue corrective bills and credits to all affected accounts. ## Severity Assessment\n- **Revenue Impact:** MEDIUM \u2014 Overcharges require refunds; contracts may include penalty clauses for systematic overbilling\n- **Regulatory Risk:** HIGH \u2014 Enterprise and government contract customers (IBM Telco: 21% on Two-year contracts) may trigger regulatory complaints\n- **Churn Correlation:** IBM Telco data shows customers with billing overcharges churn at 3.2\u00d7 baseline within 3 months of the first overbilled cycle",
+    "metadata": {
+      "chunk_index": 18,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0091": {
+    "text": "n at 3.2\u00d7 baseline within 3 months of the first overbilled cycle ## IBM Telco Contract Distribution\n- Month-to-month: 55.0% of customers (excluded from SLA breach detection)\n- One year: 20.9% of customers (moderate risk)\n- Two year: 24.1% of customers (high risk \u2014 price commitment enforced)",
+    "metadata": {
+      "chunk_index": 19,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0092": {
+    "text": "year: 24.1% of customers (high risk \u2014 price commitment enforced) ## Recommended Actions\n1. Flag all Contract \u2208 {'One year', 'Two year'} accounts with MonthlyCharges > P95 \u00d7 1.5 using IsolationForest\n2. Retrieve contract terms and compare against billing configuration\n3. Identify root cause: configuration gap vs. renewal error vs. proration vs. tier misclassification\n4. Calculate total overcharge amount from root cause start date\n5. Issue refund and corrective bill; notify account management for relationship management",
+    "metadata": {
+      "chunk_index": 20,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0093": {
+    "text": "tive bill; notify account management for relationship management 6. Fix underlying billing configuration; add contract rate cap validation to billing CI checks",
+    "metadata": {
+      "chunk_index": 21,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0094": {
+    "text": "iguration; add contract rate cap validation to billing CI checks ## Source\n[sla_breach, contract_billing_cap, rate_plan_configuration, billing_overage, two_year_contract, annual_contract]",
+    "metadata": {
+      "chunk_index": 22,
+      "total_chunks": 23,
+      "source": "sla_breach_playbook.md"
+    }
+  },
+  "c0095": {
+    "text": "# Telecom Billing Architecture Overview\n\n## IBM Telco Customer Churn Dataset \u2014 Feature Reference\n\nThe IBM Telco Customer Churn dataset (7,043 customers) is the primary training and evaluation dataset for this RCA system. Key billing-relevant features:",
+    "metadata": {
+      "chunk_index": 0,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0096": {
+    "text": "tion dataset for this RCA system. Key billing-relevant features: | Feature | Type | Values | Billing Relevance |\n|---------|------|--------|-------------------|\n| MonthlyCharges | float | $18.25 \u2013 $118.75 | Primary anomaly signal |\n| TotalCharges | float | $18.80 \u2013 $8,684.80 | Cumulative billing history |\n| tenure | int | 0 \u2013 72 months | Account maturity indicator |\n| Contract | categorical | Month-to-month, One year, Two year | Rate commitment tier |\n| InternetService | categorical | DSL, Fiber optic, No | Service tier determining base rate |",
+    "metadata": {
+      "chunk_index": 1,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0097": {
+    "text": "al | DSL, Fiber optic, No | Service tier determining base rate | | StreamingTV | categorical | Yes, No, No internet service | Bundle component \u2014 affects rating complexity |\n| StreamingMovies | categorical | Yes, No, No internet service | Bundle component \u2014 affects rating complexity |\n| PaymentMethod | categorical | Electronic check, Mailed check, Bank transfer, Credit card | Collection path |\n| Churn | binary | Yes / No (26.5% churn rate) | Outcome correlated with billing errors |",
+    "metadata": {
+      "chunk_index": 2,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0098": {
+    "text": "No (26.5% churn rate) | Outcome correlated with billing errors | ## Billing Pipeline Architecture\n\n### Stage 1: Service Provisioning\nCustomer subscribes to services (InternetService + optional StreamingTV/StreamingMovies bundles). Provisioning records activate the billing account. **Failure mode:** Provisioning sync failure \u2192 billing account activated without charge configuration \u2192 zero_billing anomaly.",
+    "metadata": {
+      "chunk_index": 3,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0099": {
+    "text": "t activated without charge configuration \u2192 zero_billing anomaly. ### Stage 2: Usage and Charge Accumulation\nActive services accumulate charges throughout the billing cycle. Recurring charges: monthly plan fee + service add-ons. **Failure mode:** Bundle rating engine error \u2192 NaN MonthlyCharges for streaming customers \u2192 billing_record_failure anomaly.",
+    "metadata": {
+      "chunk_index": 4,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0100": {
+    "text": "harges for streaming customers \u2192 billing_record_failure anomaly. ### Stage 3: Cycle-End Batch Processing\nAt billing cycle end, the batch job aggregates all charge components, applies contract caps and discounts, and produces the final MonthlyCharges value. **Failure mode:** Batch job timeout or proration error \u2192 charges exceed contract cap \u2192 sla_breach anomaly.",
+    "metadata": {
+      "chunk_index": 5,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0101": {
+    "text": "ration error \u2192 charges exceed contract cap \u2192 sla_breach anomaly. ### Stage 4: Invoice Generation and Payment Collection\nInvoice is generated from MonthlyCharges; payment collected via PaymentMethod. Retry logic handles payment failures. **Failure mode:** Retry without idempotency \u2192 duplicate charges applied \u2192 duplicate_charge anomaly.",
+    "metadata": {
+      "chunk_index": 6,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0102": {
+    "text": "mpotency \u2192 duplicate charges applied \u2192 duplicate_charge anomaly. ### Stage 5: Revenue Assurance Reconciliation\nAutomated checks compare expected vs. actual revenue. IsolationForest detector flags statistical outliers. Rule-based prefilter catches deterministic violations (MonthlyCharges = 0 with tenure > 0).\n\n## Anomaly Type Reference",
+    "metadata": {
+      "chunk_index": 7,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0103": {
+    "text": "(MonthlyCharges = 0 with tenure > 0).\n\n## Anomaly Type Reference ### Revenue Leakage Anomalies\n- **zero_billing:** MonthlyCharges = 0 AND tenure > 0 \u2014 active account receiving no invoice. Detection confidence > 0.90 via rule-based prefilter.\n- **billing_record_failure:** NaN charges for streaming customers (StreamingTV='Yes' OR StreamingMovies='Yes') \u2014 billing pipeline failed to rate multi-component bundle.",
+    "metadata": {
+      "chunk_index": 8,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0104": {
+    "text": "'Yes') \u2014 billing pipeline failed to rate multi-component bundle. ### Overbilling Anomalies\n- **duplicate_charge:** MonthlyCharges \u2248 2\u00d7 historical average \u2014 retry logic or batch re-run applied charges twice.\n- **sla_breach:** MonthlyCharges > P95 \u00d7 1.5 for contract customers \u2014 billing cap not enforced for One year / Two year contract holders.\n\n### Demand-Side Anomalies\n- **usage_spike:** MonthlyCharges increases 5\u201310\u00d7 for Fiber optic internet customers (tenure > 18 months) \u2014 roaming, miscategorised streaming traffic, or incorrect rate card.",
+    "metadata": {
+      "chunk_index": 9,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0105": {
+    "text": "aming, miscategorised streaming traffic, or incorrect rate card. ## IsolationForest Detection Configuration\n\nThe anomaly detector uses IsolationForest on the following features:\n- `tenure` \u2014 account maturity\n- `MonthlyCharges` \u2014 current cycle charge amount\n- `TotalCharges` \u2014 cumulative billing history\n\nDerived features added by `_get_feature_cols()`:\n- `charges_per_month` = TotalCharges / tenure (expected consistency indicator)\n- `monthly_total_ratio` = MonthlyCharges / (TotalCharges + 1) (normalised charge level)",
+    "metadata": {
+      "chunk_index": 10,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0106": {
+    "text": "= MonthlyCharges / (TotalCharges + 1) (normalised charge level) `rule_based_prefilter()` runs before IsolationForest and flags MonthlyCharges = 0 AND tenure > 0 at 100% precision, reducing false negatives for the most critical revenue leakage case.\n\n## Key Performance Indicators (KPIs)",
+    "metadata": {
+      "chunk_index": 11,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0107": {
+    "text": "ical revenue leakage case.\n\n## Key Performance Indicators (KPIs) | KPI | Target | IBM Telco Baseline |\n|-----|--------|-------------------|\n| Billing Accuracy | \u226599.5% | Measured by anomaly injection rate < 0.5% |\n| Zero-billing Rate | <0.1% | Rule-based prefilter catches 100% of cases |\n| Revenue Leakage Rate | <0.5% | Sum of zero_billing + billing_record_failure charges |\n| Duplicate Charge Rate | <0.01% | Idempotency controls target |\n| SLA Breach Rate | <0.1% | Applies to Contract \u2208 {One year, Two year} only |\n| Churn Rate | <26.5% | IBM Telco dataset observed rate |",
+    "metadata": {
+      "chunk_index": 12,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0108": {
+    "text": "only |\n| Churn Rate | <26.5% | IBM Telco dataset observed rate | ## SWARM Routing Decision Map",
+    "metadata": {
+      "chunk_index": 13,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0109": {
+    "text": "## SWARM Routing Decision Map | Anomaly Type | Retrieval Strategy | Rationale |\n|---|---|---|\n| zero_billing | graph_first | Multi-hop: provisioning \u2192 billing config \u2192 rating engine \u2192 invoice |\n| billing_record_failure | graph_first | Multi-hop: service catalogue \u2192 bundle rating \u2192 pipeline \u2192 charge record |\n| duplicate_charge | vector_first | Pattern matching: idempotency failure signatures in billing history |\n| usage_spike | vector_first | Pattern matching: rate card anomalies vs. historical charge profile |",
+    "metadata": {
+      "chunk_index": 14,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0110": {
+    "text": "rn matching: rate card anomalies vs. historical charge profile | | sla_breach | vector_first | Pattern matching: contract rate configuration against charge records |",
+    "metadata": {
+      "chunk_index": 15,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0111": {
+    "text": "n matching: contract rate configuration against charge records | ## Source\n[telecom_billing, ibm_telco, anomaly_detection, isolationforest, billing_pipeline, revenue_assurance]",
+    "metadata": {
+      "chunk_index": 16,
+      "total_chunks": 17,
+      "source": "telecom_billing_overview.md"
+    }
+  },
+  "c0112": {
+    "text": "# Usage Spike \u2014 RCA Playbook\n\n## Overview",
+    "metadata": {
+      "chunk_index": 0,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0113": {
+    "text": "# Usage Spike \u2014 RCA Playbook\n\n## Overview A usage spike anomaly occurs when a customer's MonthlyCharges increase suddenly to 5\u201310\u00d7 their historical baseline in a single billing cycle. In the IBM Telco Customer Churn dataset, usage spike anomalies are concentrated in customers with InternetService = 'Fiber optic' and tenure > 18 months \u2014 established internet-heavy users with stable prior charges. A MonthlyCharges increase from a typical $89 to $890+ is the detection signature",
+    "metadata": {
+      "chunk_index": 1,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0114": {
+    "text": "increase from a typical $89 to $890+ is the detection signature Root causes range from billing system errors (most common) to legitimate high usage.",
+    "metadata": {
+      "chunk_index": 2,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0115": {
+    "text": "om billing system errors (most common) to legitimate high usage. ## Detection Signals\n\n- **Primary:** MonthlyCharges > P95(all customers) \u00d7 2.0, with prior months showing stable charges (indicated by TotalCharges \u00f7 tenure \u226a current MonthlyCharges)\n- **Secondary:** InternetService = 'Fiber optic', tenure > 18 months, StreamingTV or StreamingMovies = 'Yes'\n- **Threshold:** MonthlyCharges > 10\u00d7 the customer's historical average \u2192 IsolationForest confidence > 0.89 (SWARM routing: vector_first, pattern-matched against usage spike playbook)\n\n## Common Root Causes",
+    "metadata": {
+      "chunk_index": 3,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0116": {
+    "text": "ern-matched against usage spike playbook)\n\n## Common Root Causes ### 1. Roaming Charges Not Capped per Contract\n**Description:** International or domestic roaming data charges were applied without the contracted roaming cap, resulting in per-MB billing at the highest retail rate.\n**Indicators:** Usage spike corresponds to a travel period. Multiple charges from roaming zones appear in the detailed bill. Customer's contract includes a roaming data cap that was not applied.\n**Investigation Steps:**",
+    "metadata": {
+      "chunk_index": 4,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0117": {
+    "text": "roaming data cap that was not applied.\n**Investigation Steps:** 1. Extract detailed billing records for the spike period \u2014 look for roaming zone charge codes\n2. Compare applied roaming rate against the customer's contracted roaming cap\n3. Check if the roaming cap configuration exists in the rate card for this plan\n4. Verify whether the cap is enforced in real-time or only during billing\n**Resolution:** Apply the contracted roaming cap retroactively. Issue a corrective bill for the difference. Add real-time roaming cap enforcement to the billing engine.",
+    "metadata": {
+      "chunk_index": 5,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0118": {
+    "text": "ce. Add real-time roaming cap enforcement to the billing engine. ### 2. Streaming Service Miscategorised as Premium Tier\n**Description:** A streaming service subscription (StreamingTV or StreamingMovies) was reclassified as a premium-tier service during a catalogue update, causing it to be rated at the premium rate instead of the included bundle rate.\n**Indicators:** Usage spike correlates with a service catalogue update date. Affected customers all have StreamingTV = 'Yes' or StreamingMovies = 'Yes'. MonthlyCharges increase by exactly the premium tier rate differential.",
+    "metadata": {
+      "chunk_index": 6,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0119": {
+    "text": "yCharges increase by exactly the premium tier rate differential. **Investigation Steps:**\n1. Check service catalogue update history for the spike date\n2. Compare pre- and post-update rate entries for StreamingTV/StreamingMovies\n3. Identify all customers with streaming services who received the spike\n4. Verify the intended rate classification in the updated catalogue\n**Resolution:** Revert streaming service rate classification to bundle rate. Reprocess billing for the affected cycle. Add catalogue update validation that checks rate changes against existing contract terms.",
+    "metadata": {
+      "chunk_index": 7,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0120": {
+    "text": "dation that checks rate changes against existing contract terms. ### 3. Rating Plan Not Updated After Service Upgrade\n**Description:** A customer upgraded their service plan (e.g., from DSL to Fiber optic), but the billing engine continued to use the old plan's rate \u2014 then at month-end the system detected the mismatch and applied the difference in a lump sum, creating an apparent spike.",
+    "metadata": {
+      "chunk_index": 8,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0121": {
+    "text": "pplied the difference in a lump sum, creating an apparent spike. **Indicators:** The spike amount matches the difference between old and new plan rates \u00d7 number of days since upgrade. The spike occurs in the first billing cycle after a plan change. InternetService shows 'Fiber optic' but the prior month showed 'DSL'.\n**Investigation Steps:**\n1. Check plan change history for the spike date\n2. Calculate expected proration: (new_rate - old_rate) \u00d7 (days_remaining \u00f7 cycle_days)\n3. Compare calculated proration against the actual spike amount",
+    "metadata": {
+      "chunk_index": 9,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0122": {
+    "text": "3. Compare calculated proration against the actual spike amount 4. Verify the billing engine's plan change proration logic\n**Resolution:** Correct the proration calculation. Issue a corrective bill if the applied amount is incorrect. Fix the plan change handler to apply proration at time of change, not month-end.",
+    "metadata": {
+      "chunk_index": 10,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0123": {
+    "text": "nge handler to apply proration at time of change, not month-end. ### 4. International Usage Applied at Incorrect Rate\n**Description:** International usage (calls or data) was rated at a domestic premium rate rather than the applicable international rate, which \u2014 counterintuitively \u2014 may be lower for contracted international bundles.\n**Indicators:** Charge spike includes international destination codes. The applied rate is higher than the customer's contracted international rate.\n**Investigation Steps:**",
+    "metadata": {
+      "chunk_index": 11,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0124": {
+    "text": "stomer's contracted international rate.\n**Investigation Steps:** 1. Extract international destination charge codes from the spike period\n2. Compare applied rates against the customer's international rate schedule\n3. Check whether international bundle entitlements were correctly applied\n4. Verify rate card currency and unit settings for international zones\n**Resolution:** Recalculate charges at correct international rates. Issue corrective bill. Add international rate validation to the billing pipeline.",
+    "metadata": {
+      "chunk_index": 12,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0125": {
+    "text": "bill. Add international rate validation to the billing pipeline. ## Severity Assessment\n\n- **Revenue Impact:** MEDIUM \u2014 may represent legitimate revenue or billing errors. Requires case-by-case assessment.\n- **Customer Impact:** HIGH \u2014 unexpected large bill causes significant customer distress, payment default risk, and churn. IBM Telco: customers with sudden charge spikes churn at 3.1\u00d7 baseline rate.\n- **Detection Confidence:** IsolationForest score > 0.85 for charges > P95 \u00d7 2.0 combined with stable tenure history.\n\n## Recommended Actions",
+    "metadata": {
+      "chunk_index": 13,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0126": {
+    "text": "2.0 combined with stable tenure history.\n\n## Recommended Actions 1. Cross-reference the spike charges against the customer's rate card and contract terms\n2. Check for roaming, streaming recategorisation, and plan change events in the spike period\n3. Notify the customer immediately if the spike represents a system error; issue corrective bill\n4. Add MLflow alert: usage_spike_rate > 0.002 (0.2%) AND avg_spike_amount > $200 triggers escalation",
+    "metadata": {
+      "chunk_index": 14,
+      "total_chunks": 15,
+      "source": "usage_spike_playbook.md"
+    }
+  },
+  "c0127": {
+    "text": "# Zero Billing \u2014 RCA Playbook\n\n## Overview\n\nA zero-billing anomaly occurs when an active customer (tenure > 0, services provisioned) shows MonthlyCharges = $0 for the current billing cycle. In the IBM Telco Customer Churn dataset, zero-billing accounts have a median tenure of 28 months and 71% hold Fiber optic internet service \u2014 established, high-value customers with clear billing history. Revenue impact: 100% charge leakage for the affected billing cycle.\n\n## Detection Signals",
+    "metadata": {
+      "chunk_index": 0,
+      "total_chunks": 12,
+      "source": "zero_billing_playbook.md"
+    }
+  },
+  "c0128": {
+    "text": "ge leakage for the affected billing cycle.\n\n## Detection Signals - **Primary:** MonthlyCharges = 0.0 AND tenure > 0 (active account with prior charge history)\n- **Secondary:** InternetService \u2208 {'Fiber optic', 'DSL'}, TotalCharges > 0, Churn_Binary = 0\n- **Threshold:** rule_based_prefilter flags this at 100% precision. IsolationForest anomaly score < -0.2 with MonthlyCharges = 0 \u2192 confidence > 0.90.\n\n## Common Root Causes",
+    "metadata": {
+      "chunk_index": 1,
+      "total_chunks": 12,
+      "source": "zero_billing_playbook.md"
+    }
+  },
+  "c0129": {
+    "text": "h MonthlyCharges = 0 \u2192 confidence > 0.90.\n\n## Common Root Causes ### 1. Rating Engine Configuration Error\n**Description:** Rate card incorrectly set to $0 for a service plan \u2014 typically after a system upgrade or maintenance window.\n**Indicators:** Multiple accounts on the same Contract/InternetService plan show zero billing simultaneously. Issue onset matches a deployment date.\n**Investigation Steps:**\n1. Group zero-billed accounts by Contract and InternetService \u2014 concentration in one plan \u2192 rate card error\n2. Compare current rate card version to pre-upgrade snapshot",
+    "metadata": {
+      "chunk_index": 2,
+      "total_chunks": 12,
+      "source": "zero_billing_playbook.md"
+    }
+  },
+  "c0130": {
+    "text": "ror\n2. Compare current rate card version to pre-upgrade snapshot 3. Check billing system deployment log for maintenance window timing\n4. Validate all rate entries for affected service bundles\n**Resolution:** Revert rate card to pre-upgrade configuration. Reprocess the billing cycle for all affected accounts. Add rate card validation to the deployment pipeline.",
+    "metadata": {
+      "chunk_index": 3,
+      "total_chunks": 12,
+      "source": "zero_billing_playbook.md"
+    }
+  },
+  "c0131": {
+    "text": "d accounts. Add rate card validation to the deployment pipeline. ### 2. Billing Cycle Boundary Error\n**Description:** Billing batch scheduler skips charge generation for accounts whose cycle starts on a month boundary when the batch job completes after midnight.\n**Indicators:** Affected accounts cluster on the same billing cycle start date. Issue recurs monthly on a predictable schedule.\n**Investigation Steps:**\n1. Extract billing cycle start dates for zero-billed accounts\n2. Check if dates cluster around month boundaries (1st, 28th\u201331st)",
+    "metadata": {
+      "chunk_index": 4,
+      "total_chunks": 12,
+      "source": "zero_billing_playbook.md"
+    }
+  },
+  "c0132": {
+    "text": "Check if dates cluster around month boundaries (1st, 28th\u201331st) 3. Review batch job completion timestamps vs. cycle boundary timestamps\n4. Verify time synchronisation across billing servers\n**Resolution:** Fix boundary condition in billing cycle scheduler. Run a compensatory billing pass for missed cycles. Alert when zero-billing rate exceeds 0.1% for any single cycle.",
+    "metadata": {
+      "chunk_index": 5,
+      "total_chunks": 12,
+      "source": "zero_billing_playbook.md"
+    }
+  },
+  "c0133": {
+    "text": "Alert when zero-billing rate exceeds 0.1% for any single cycle. ### 3. Provisioning Sync Failure\n**Description:** The provisioning system shows services as active, but the billing engine never received the activation event \u2014 no charge record exists to rate.\n**Indicators:** Account shows active services in CRM but MonthlyCharges = 0. Issue is isolated to specific accounts (not plan-wide). TotalCharges > 0 confirms prior billing.\n**Investigation Steps:**\n1. Compare provisioning service status against billing engine charge records",
+    "metadata": {
+      "chunk_index": 6,
+      "total_chunks": 12,
+      "source": "zero_billing_playbook.md"
+    }
+  },
+  "c0134": {
+    "text": "rovisioning service status against billing engine charge records 2. Check event queue for unprocessed service activation events\n3. Review activation timestamps vs. billing cycle start time\n4. Inspect integration health between provisioning system and billing engine\n**Resolution:** Replay missed activation events. Generate corrective charge for missed cycles. Add event delivery monitoring with dead-letter queue alerting.",
+    "metadata": {
+      "chunk_index": 7,
+      "total_chunks": 12,
+      "source": "zero_billing_playbook.md"
+    }
+  },
+  "c0135": {
+    "text": ". Add event delivery monitoring with dead-letter queue alerting. ### 4. Payment Posting Timeout\n**Description:** Billing engine generated the charge correctly but the payment posting step timed out and rolled back without retry \u2014 leaving MonthlyCharges = 0 in the customer record.\n**Indicators:** Internal charge records show a generated charge; customer-facing MonthlyCharges = 0. Payment posting logs show timeout errors.\n**Investigation Steps:**\n1. Cross-reference internal charge records against customer-facing MonthlyCharges",
+    "metadata": {
+      "chunk_index": 8,
+      "total_chunks": 12,
+      "source": "zero_billing_playbook.md"
+    }
+  },
+  "c0136": {
+    "text": "e internal charge records against customer-facing MonthlyCharges 2. Review payment posting timeout logs for the billing cycle\n3. Verify retry configuration for failed posting operations\n4. Check network stability between billing engine and payment system\n**Resolution:** Implement idempotent retry with exponential backoff. Repost charges for affected accounts. Set billing completeness monitoring alert in MLflow.",
+    "metadata": {
+      "chunk_index": 9,
+      "total_chunks": 12,
+      "source": "zero_billing_playbook.md"
+    }
+  },
+  "c0137": {
+    "text": "d accounts. Set billing completeness monitoring alert in MLflow. ## Severity Assessment\n\n- **Revenue Impact:** HIGH \u2014 100% charge leakage per affected account per cycle. IBM Telco median MonthlyCharges \u2248 $65; at 3% rate \u2248 $185K monthly leakage per 100K customers.\n- **Customer Impact:** LOW \u2014 customer receives free service; unlikely to complain. No churn risk increase.\n- **Detection Confidence:** IsolationForest score < -0.5 with MonthlyCharges = 0 and tenure > 6 \u2192 confidence > 0.90. Rule-based prefilter is deterministic.\n\n## Recommended Actions",
+    "metadata": {
+      "chunk_index": 10,
+      "total_chunks": 12,
+      "source": "zero_billing_playbook.md"
+    }
+  },
+  "c0138": {
+    "text": ". Rule-based prefilter is deterministic.\n\n## Recommended Actions 1. Trigger billing record reprocessing for all zero-billed active accounts in the current cycle\n2. Group affected accounts by InternetService and Contract to isolate plan-specific vs. system-wide root cause\n3. Issue corrective billing statement for the missed cycle amount\n4. Add MLflow alert: zero_billing_rate > 0.001 (0.1%) triggers escalation",
+    "metadata": {
+      "chunk_index": 11,
+      "total_chunks": 12,
+      "source": "zero_billing_playbook.md"
+    }
+  }
+}

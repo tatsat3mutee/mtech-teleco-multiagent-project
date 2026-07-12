@@ -1,0 +1,47 @@
+{
+  "no_rag": {
+    "total_processed": 15,
+    "successful": 15,
+    "avg_latency_ms": 1215.3780301411946,
+    "avg_retrieval_count": 0.0,
+    "anomaly_type_accuracy": 1.0,
+    "rouge_l_f1": 0.08796123082310582,
+    "bert_score_f1": 0.08796123082310582
+  },
+  "rag_only": {
+    "total_processed": 15,
+    "successful": 15,
+    "avg_latency_ms": 9518.195915222168,
+    "avg_retrieval_count": 0.0,
+    "anomaly_type_accuracy": 1.0,
+    "rouge_l_f1": 0.0961714106469185,
+    "bert_score_f1": 0.0961714106469185
+  },
+  "single_agent_rag": {
+    "total_processed": 15,
+    "successful": 10,
+    "avg_latency_ms": 1362.9857381184895,
+    "avg_retrieval_count": 0.0,
+    "anomaly_type_accuracy": 0.6666666666666666,
+    "rouge_l_f1": 0.06347416665556663,
+    "bert_score_f1": 0.06347416665556663
+  },
+  "multi_agent_rag": {
+    "total_processed": 15,
+    "successful": 15,
+    "avg_latency_ms": 522.049887975057,
+    "avg_retrieval_count": 2.0,
+    "anomaly_type_accuracy": 1.0,
+    "rouge_l_f1": 0.17720679155001343,
+    "bert_score_f1": 0.17720679155001343
+  },
+  "graph_rag": {
+    "total_processed": 15,
+    "successful": 15,
+    "avg_latency_ms": 141.66962305704752,
+    "avg_retrieval_count": 5.0,
+    "anomaly_type_accuracy": 1.0,
+    "rouge_l_f1": 0.1812010104437199,
+    "bert_score_f1": 0.1812010104437199
+  }
+}

@@ -33,15 +33,17 @@ ENV/
 *.pem
 *.key
 
-# Data (regenerable)
+# Data (regenerable) — EXCEPT small demo/build artifacts the Dockerfile ships:
+#   anomalies_labeled.csv (1 MB, RCA Viewer demo data)
+#   data/graph_rag/ (79 KB, pre-built causal graph)
+#   results/ablation/ (272 KB, thesis evidence + Experiment Results page)
 data/raw/
-data/processed/
-data/graph_rag/
+data/processed/*
+!data/processed/anomalies_labeled.csv
 
 # Build artifacts
 chroma_db/
 mlruns/
-results/ablation/
 models/*.joblib
 inferences.db
 *.log

@@ -1,0 +1,1042 @@
+[
+  {
+    "anomaly_data": {
+      "account_id": "ABL-ZB-001",
+      "ground_truth_id": "ZB-001",
+      "anomaly_type": "zero_billing",
+      "confidence": 0.8,
+      "monthly_charges": 0.0,
+      "total_charges": 1912.6612510301559,
+      "tenure": 17,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "Two year"
+      }
+    },
+    "retrieved_docs": [
+      {
+        "text": "# Zero Billing \u2014 RCA Playbook\n\n## Overview\n\nA zero-billing anomaly occurs when an active customer (tenure > 0, services provisioned) shows MonthlyCharges = $0 for the current billing cycle. In the IBM Telco Customer Churn dataset, zero-billing accounts have a median tenure of 28 months and 71% hold Fiber optic internet service \u2014 established, high-value customers with clear billing history. Revenue impact: 100% charge leakage for the affected billing cycle.\n\n## Detection Signals",
+        "source": "zero_billing_playbook.md",
+        "relevance_score": 0.8,
+        "metadata": {
+          "source": "zero_billing_playbook.md",
+          "chunk_id": "c0127",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "onse Framework for Billing Anomalies\n\n## Incident Classification ### Severity Levels\n| Level | Description | Response Time | IBM Telco Examples |\n|-------|-------------|---------------|-------------------|\n| P1 - Critical | Billing system failure affecting >10% of accounts | 15 minutes | Zero-billing across all Fiber optic accounts; mass duplicate charges on billing cycle date |\n| P2 - High | Billing error affecting specific customer segment | 1 hour | Zero-billing for all Two-year contract customers; SLA breach for enterprise accounts |",
+        "source": "incident_response_framework.md",
+        "relevance_score": 0.7,
+        "metadata": {
+          "source": "incident_response_framework.md",
+          "chunk_id": "c0035",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "om billing system errors (most common) to legitimate high usage. ## Detection Signals\n\n- **Primary:** MonthlyCharges > P95(all customers) \u00d7 2.0, with prior months showing stable charges (indicated by TotalCharges \u00f7 tenure \u226a current MonthlyCharges)\n- **Secondary:** InternetService = 'Fiber optic', tenure > 18 months, StreamingTV or StreamingMovies = 'Yes'\n- **Threshold:** MonthlyCharges > 10\u00d7 the customer's historical average \u2192 IsolationForest confidence > 0.89 (SWARM routing: vector_first, pattern-matched against usage spike playbook)\n\n## Common Root Causes",
+        "source": "usage_spike_playbook.md",
+        "relevance_score": 0.55,
+        "metadata": {
+          "source": "usage_spike_playbook.md",
+          "chunk_id": "c0115",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for an account with tenure > 0\n- **Secondary:** StreamingTV = 'Yes' OR StreamingMovies = 'Yes' (streaming service accounts are disproportionately affected); InternetService = 'Fiber optic'\n- **Threshold:** IsolationForest treats NaN-filled (median-imputed) values as outliers with confidence > 0.88. SWARM routing: graph_first \u2014 billing system \u2192 ingestion pipeline \u2192 bundle rating engine is a multi-hop causal chain.",
+        "source": "cdr_failure_playbook.md",
+        "relevance_score": 0.55,
+        "metadata": {
+          "source": "cdr_failure_playbook.md",
+          "chunk_id": "c0003",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "ratio \u2192 IsolationForest confidence > 0.85\n\n## Common Root Causes ### 1. Billing System Retry Logic \u2014 Duplicate Charge Posting\n**Description:** The billing engine's retry logic lacks idempotency \u2014 a failed charge posting is retried, and both the original and retry succeed, posting two charges for one billing cycle.\n**Indicators:** Two separate charge transactions with the same billing period in the payment system. MonthlyCharges exactly 2\u00d7 the previous month. Appears in batch processing logs as \"charge posted \u2014 retry succeeded.\"\n**Investigation Steps:**",
+        "source": "duplicate_charge_playbook.md",
+        "relevance_score": 0.45,
+        "metadata": {
+          "source": "duplicate_charge_playbook.md",
+          "chunk_id": "c0024",
+          "retrieval_mode": "graph_rag"
+        }
+      }
+    ],
+    "retrieval_count": 5,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "graph_first",
+    "routing_explanation": "Anomaly type 'zero_billing' requires multi-hop causal reasoning (billing system \u2192 component \u2192 error code \u2192 fix). Graph-first traversal selected: seeds the knowledge graph at the anomaly node and follows causal edges via 2-hop BFS.",
+    "retrieval_query": "Search for RCA playbooks and incident reports related to \"zero billing\" anomalies in fiber optic internet services with two-year contracts, focusing on documentation that investigates discrepancies between monthly and total charges. Retrieve documents containing keywords like \"billing system glitches\", \"contract tenure mismatch\", \"internet service provisioning errors\" and \"revenue assurance failures\" for account tenure greater than 12 months.",
+    "hypothesis": "ROOT CAUSE: Billing system failure or error affecting the customer's account, resulting in zero billing for the current cycle.\n\nREASONING:\n1. The anomaly record shows a zero_billing anomaly with a confidence score of 0.80, indicating a high likelihood of a genuine issue.\n2. The account has a tenure of 17 months and total charges of $1912.66, suggesting that the customer is an established, high-value customer with a clear billing history.\n3. The zero_billing_playbook.md document describes zero-billing anomalies as occurring when an active customer shows MonthlyCharges = $0 for the current billing cycle, which matches the anomaly record.\n4. The incident_response_framework.md document classifies billing system failures affecting specific customer segments as P2 - High severity incidents, which may be relevant to this case.\n5. The usage_spike_playbook.md and cdr_failure_playbook.md documents describe other types of billing anomalies, but the primary detection signals do not match the anomaly record.\n\nEVIDENCE:\n* The account has a tenure of 17 months and total charges of $1912.66 (ANOMALY RECORD).\n* Zero-billing anomalies occur when an active customer shows MonthlyCharges = $0 for the current billing cycle (zero_billing_playbook.md).\n* Billing system failures affecting specific customer segments are classified as P2 - High severity incidents (incident_response_framework.md).\n\nCONFIDENCE: MEDIUM\n\nCITATIONS:\n* zero_billing_playbook.md (description of zero-billing anomalies)\n* incident_response_framework.md (classification of billing system failures)\n* ANOMALY RECORD (account tenure and total charges)\n\nNote: The confidence level is medium because while the anomaly record and retrieved documents provide some evidence supporting the hypothesis, there is no direct indication of a billing system failure or error specific to this account. Additional investigation may be necessary to confirm the root cause.",
+    "reasoning_chain": "ROOT CAUSE: Billing system failure or error affecting the customer's account, resulting in zero billing for the current cycle.\n\nREASONING:\n1. The anomaly record shows a zero_billing anomaly with a confidence score of 0.80, indicating a high likelihood of a genuine issue.\n2. The account has a tenure of 17 months and total charges of $1912.66, suggesting that the customer is an established, high-value customer with a clear billing history.\n3. The zero_billing_playbook.md document describes zero-billing anomalies as occurring when an active customer shows MonthlyCharges = $0 for the current billing cycle, which matches the anomaly record.\n4. The incident_response_framework.md document classifies billing system failures affecting specific customer segments as P2 - High severity incidents, which may be relevant to this case.\n5. The usage_spike_playbook.md and cdr_failure_playbook.md documents describe other types of billing anomalies, but the primary detection signals do not match the anomaly record.\n\nEVIDENCE:\n* The account has a tenure of 17 months and total charges of $1912.66 (ANOMALY RECORD).\n* Zero-billing anomalies occur when an active customer shows MonthlyCharges = $0 for the current billing cycle (zero_billing_playbook.md).\n* Billing system failures affecting specific customer segments are classified as P2 - High severity incidents (incident_response_framework.md).\n\nCONFIDENCE: MEDIUM\n\nCITATIONS:\n* zero_billing_playbook.md (description of zero-billing anomalies)\n* incident_response_framework.md (classification of billing system failures)\n* ANOMALY RECORD (account tenure and total charges)\n\nNote: The confidence level is medium because while the anomaly record and retrieved documents provide some evidence supporting the hypothesis, there is no direct indication of a billing system failure or error specific to this account. Additional investigation may be necessary to confirm the root cause.",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "Hypothesis aligns with retrieved evidence",
+      "Zero-billing anomaly matches description in zero_billing_playbook.md",
+      "Account characteristics match those of established, high-value customers"
+    ],
+    "critic_confidence": 0.8,
+    "rca_report": {
+      "anomaly_id": "ABL-ZB-001",
+      "anomaly_type": "zero_billing",
+      "root_cause": "Billing system failure or error affecting the customer's account, resulting in zero billing for the current cycle.",
+      "supporting_evidence": [
+        "zero_billing_playbook.md: # Zero Billing \u2014 RCA Playbook\n\n## Overview\n\nA zero-billing anomaly occurs when an active customer (tenure > 0, services provisioned) shows MonthlyChar...",
+        "incident_response_framework.md: onse Framework for Billing Anomalies\n\n## Incident Classification ### Severity Levels\n| Level | Description | Response Time | IBM Telco Examples |\n|---...",
+        "usage_spike_playbook.md: om billing system errors (most common) to legitimate high usage. ## Detection Signals\n\n- **Primary:** MonthlyCharges > P95(all customers) \u00d7 2.0, with ..."
+      ],
+      "recommended_actions": [
+        "Trigger billing record reprocessing for affected account",
+        "Verify billing pipeline health for batch processing window",
+        "Issue corrective billing statement to customer",
+        "Add monitoring alert for zero-billing anomaly rate in MLflow"
+      ],
+      "severity": "HIGH",
+      "confidence_score": 0.8,
+      "summary": "A zero-billing anomaly was detected for account ABL-ZB-001. The customer has active services but was charged $0.00 for the current billing cycle. Root cause analysis indicates a billing processing pipeline failure or rating engine misconfiguration. Immediate billing record reprocessing and corrective billing are recommended."
+    },
+    "latency_ms": 5021.969795227051,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-ZB-002",
+      "ground_truth_id": "ZB-002",
+      "anomaly_type": "zero_billing",
+      "confidence": 0.83,
+      "monthly_charges": 0.0,
+      "total_charges": 963.7234689432912,
+      "tenure": 31,
+      "features": {
+        "InternetService": "DSL",
+        "Contract": "Month-to-month"
+      }
+    },
+    "retrieved_docs": [
+      {
+        "text": "t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for an account with tenure > 0\n- **Secondary:** StreamingTV = 'Yes' OR StreamingMovies = 'Yes' (streaming service accounts are disproportionately affected); InternetService = 'Fiber optic'\n- **Threshold:** IsolationForest treats NaN-filled (median-imputed) values as outliers with confidence > 0.88. SWARM routing: graph_first \u2014 billing system \u2192 ingestion pipeline \u2192 bundle rating engine is a multi-hop causal chain.",
+        "source": "cdr_failure_playbook.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "cdr_failure_playbook.md",
+          "chunk_id": "c0003",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediate billing mediation layer re-transmitted already-processed billing records due to a delivery acknowledgement failure, causing the rating engine to process them twice.\n**Indicators:** The same usage record appears twice in the rating engine's input queue with identical timestamps. MonthlyCharges = 2\u00d7 normal specifically for customers with complex service bundles.\n**Investigation Steps:**",
+        "source": "duplicate_charge_playbook.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "duplicate_charge_playbook.md",
+          "chunk_id": "c0030",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "customers with complex service bundles.\n**Investigation Steps:** 1. Check the mediation layer's delivery acknowledgement logs\n2. Compare rating engine input queue to mediation layer output for duplicates\n3. Review which service types (StreamingTV, MultipleLines) are most affected\n4. Verify exactly-once delivery semantics in the mediation layer configuration\n**Resolution:** Enable exactly-once delivery semantics. Add duplicate detection at the rating engine input gate. Purge duplicate entries and reprocess correct records.",
+        "source": "duplicate_charge_playbook.md",
+        "relevance_score": 0.45,
+        "metadata": {
+          "source": "duplicate_charge_playbook.md",
+          "chunk_id": "c0031",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "h MonthlyCharges = 0 \u2192 confidence > 0.90.\n\n## Common Root Causes ### 1. Rating Engine Configuration Error\n**Description:** Rate card incorrectly set to $0 for a service plan \u2014 typically after a system upgrade or maintenance window.\n**Indicators:** Multiple accounts on the same Contract/InternetService plan show zero billing simultaneously. Issue onset matches a deployment date.\n**Investigation Steps:**\n1. Group zero-billed accounts by Contract and InternetService \u2014 concentration in one plan \u2192 rate card error\n2. Compare current rate card version to pre-upgrade snapshot",
+        "source": "zero_billing_playbook.md",
+        "relevance_score": 0.45,
+        "metadata": {
+          "source": "zero_billing_playbook.md",
+          "chunk_id": "c0129",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "t activated without charge configuration \u2192 zero_billing anomaly. ### Stage 2: Usage and Charge Accumulation\nActive services accumulate charges throughout the billing cycle. Recurring charges: monthly plan fee + service add-ons. **Failure mode:** Bundle rating engine error \u2192 NaN MonthlyCharges for streaming customers \u2192 billing_record_failure anomaly.",
+        "source": "telecom_billing_overview.md",
+        "relevance_score": 0.45,
+        "metadata": {
+          "source": "telecom_billing_overview.md",
+          "chunk_id": "c0099",
+          "retrieval_mode": "graph_rag"
+        }
+      }
+    ],
+    "retrieval_count": 5,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "graph_first",
+    "routing_explanation": "Anomaly type 'zero_billing' requires multi-hop causal reasoning (billing system \u2192 component \u2192 error code \u2192 fix). Graph-first traversal selected: seeds the knowledge graph at the anomaly node and follows causal edges via 2-hop BFS.",
+    "retrieval_query": "zero billing active customer rating engine configuration billing pipeline failure",
+    "hypothesis": "ROOT CAUSE: Billing processing pipeline failure resulting in zero-rated billing records. The billing system failed to process usage records for the current cycle, likely due to a rating engine configuration error or provisioning system mismatch.\n\nREASONING:\n1. Customer has active services (tenure > 0) but MonthlyCharges = $0.00\n2. This pattern matches billing pipeline failure or provisioning sync issues\n3. The most common cause is a rating engine misconfiguration after a system upgrade\n4. Evidence from [cdr_failure_playbook.md] supports this diagnosis\n\nEVIDENCE:\n- [cdr_failure_playbook.md]: t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for an account with tenure > 0\n- **Secondary:** StreamingTV = 'Yes' OR StreamingMovies = 'Yes' (streaming service accounts are disproportionately affected)\n\nCITATIONS: [zero_billing_playbook.md]\n\nCONFIDENCE: HIGH",
+    "reasoning_chain": "ROOT CAUSE: Billing processing pipeline failure resulting in zero-rated billing records. The billing system failed to process usage records for the current cycle, likely due to a rating engine configuration error or provisioning system mismatch.\n\nREASONING:\n1. Customer has active services (tenure > 0) but MonthlyCharges = $0.00\n2. This pattern matches billing pipeline failure or provisioning sync issues\n3. The most common cause is a rating engine misconfiguration after a system upgrade\n4. Evidence from [cdr_failure_playbook.md] supports this diagnosis\n\nEVIDENCE:\n- [cdr_failure_playbook.md]: t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for an account with tenure > 0\n- **Secondary:** StreamingTV = 'Yes' OR StreamingMovies = 'Yes' (streaming service accounts are disproportionately affected)\n\nCITATIONS: [zero_billing_playbook.md]\n\nCONFIDENCE: HIGH",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-ZB-002",
+      "anomaly_type": "zero_billing",
+      "root_cause": "Billing processing pipeline failure resulting in zero-rated billing records. The billing system failed to process usage records for the current cycle, likely due to a rating engine configuration error or provisioning system mismatch.",
+      "supporting_evidence": [
+        "cdr_failure_playbook.md: t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for a...",
+        "duplicate_charge_playbook.md: ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediat...",
+        "duplicate_charge_playbook.md: customers with complex service bundles.\n**Investigation Steps:** 1. Check the mediation layer's delivery acknowledgement logs\n2. Compare rating engine..."
+      ],
+      "recommended_actions": [
+        "Trigger billing record reprocessing for affected account",
+        "Verify billing pipeline health for batch processing window",
+        "Issue corrective billing statement to customer",
+        "Add monitoring alert for zero-billing anomaly rate in MLflow"
+      ],
+      "severity": "HIGH",
+      "confidence_score": 0.83,
+      "summary": "A zero-billing anomaly was detected for account ABL-ZB-002. The customer has active services but was charged $0.00 for the current billing cycle. Root cause analysis indicates a billing processing pipeline failure or rating engine misconfiguration. Immediate billing record reprocessing and corrective billing are recommended."
+    },
+    "latency_ms": 106.89473152160645,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-ZB-003",
+      "ground_truth_id": "ZB-003",
+      "anomaly_type": "zero_billing",
+      "confidence": 0.82,
+      "monthly_charges": 0.0,
+      "total_charges": 2720.5700082689873,
+      "tenure": 72,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "One year"
+      }
+    },
+    "retrieved_docs": [
+      {
+        "text": "t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for an account with tenure > 0\n- **Secondary:** StreamingTV = 'Yes' OR StreamingMovies = 'Yes' (streaming service accounts are disproportionately affected); InternetService = 'Fiber optic'\n- **Threshold:** IsolationForest treats NaN-filled (median-imputed) values as outliers with confidence > 0.88. SWARM routing: graph_first \u2014 billing system \u2192 ingestion pipeline \u2192 bundle rating engine is a multi-hop causal chain.",
+        "source": "cdr_failure_playbook.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "cdr_failure_playbook.md",
+          "chunk_id": "c0003",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediate billing mediation layer re-transmitted already-processed billing records due to a delivery acknowledgement failure, causing the rating engine to process them twice.\n**Indicators:** The same usage record appears twice in the rating engine's input queue with identical timestamps. MonthlyCharges = 2\u00d7 normal specifically for customers with complex service bundles.\n**Investigation Steps:**",
+        "source": "duplicate_charge_playbook.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "duplicate_charge_playbook.md",
+          "chunk_id": "c0030",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "customers with complex service bundles.\n**Investigation Steps:** 1. Check the mediation layer's delivery acknowledgement logs\n2. Compare rating engine input queue to mediation layer output for duplicates\n3. Review which service types (StreamingTV, MultipleLines) are most affected\n4. Verify exactly-once delivery semantics in the mediation layer configuration\n**Resolution:** Enable exactly-once delivery semantics. Add duplicate detection at the rating engine input gate. Purge duplicate entries and reprocess correct records.",
+        "source": "duplicate_charge_playbook.md",
+        "relevance_score": 0.45,
+        "metadata": {
+          "source": "duplicate_charge_playbook.md",
+          "chunk_id": "c0031",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "h MonthlyCharges = 0 \u2192 confidence > 0.90.\n\n## Common Root Causes ### 1. Rating Engine Configuration Error\n**Description:** Rate card incorrectly set to $0 for a service plan \u2014 typically after a system upgrade or maintenance window.\n**Indicators:** Multiple accounts on the same Contract/InternetService plan show zero billing simultaneously. Issue onset matches a deployment date.\n**Investigation Steps:**\n1. Group zero-billed accounts by Contract and InternetService \u2014 concentration in one plan \u2192 rate card error\n2. Compare current rate card version to pre-upgrade snapshot",
+        "source": "zero_billing_playbook.md",
+        "relevance_score": 0.45,
+        "metadata": {
+          "source": "zero_billing_playbook.md",
+          "chunk_id": "c0129",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "t activated without charge configuration \u2192 zero_billing anomaly. ### Stage 2: Usage and Charge Accumulation\nActive services accumulate charges throughout the billing cycle. Recurring charges: monthly plan fee + service add-ons. **Failure mode:** Bundle rating engine error \u2192 NaN MonthlyCharges for streaming customers \u2192 billing_record_failure anomaly.",
+        "source": "telecom_billing_overview.md",
+        "relevance_score": 0.45,
+        "metadata": {
+          "source": "telecom_billing_overview.md",
+          "chunk_id": "c0099",
+          "retrieval_mode": "graph_rag"
+        }
+      }
+    ],
+    "retrieval_count": 5,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "graph_first",
+    "routing_explanation": "Anomaly type 'zero_billing' requires multi-hop causal reasoning (billing system \u2192 component \u2192 error code \u2192 fix). Graph-first traversal selected: seeds the knowledge graph at the anomaly node and follows causal edges via 2-hop BFS.",
+    "retrieval_query": "zero billing active customer rating engine configuration billing pipeline failure",
+    "hypothesis": "ROOT CAUSE: Billing processing pipeline failure resulting in zero-rated billing records. The billing system failed to process usage records for the current cycle, likely due to a rating engine configuration error or provisioning system mismatch.\n\nREASONING:\n1. Customer has active services (tenure > 0) but MonthlyCharges = $0.00\n2. This pattern matches billing pipeline failure or provisioning sync issues\n3. The most common cause is a rating engine misconfiguration after a system upgrade\n4. Evidence from [cdr_failure_playbook.md] supports this diagnosis\n\nEVIDENCE:\n- [cdr_failure_playbook.md]: t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for an account with tenure > 0\n- **Secondary:** StreamingTV = 'Yes' OR StreamingMovies = 'Yes' (streaming service accounts are disproportionately affected)\n\nCITATIONS: [zero_billing_playbook.md]\n\nCONFIDENCE: HIGH",
+    "reasoning_chain": "ROOT CAUSE: Billing processing pipeline failure resulting in zero-rated billing records. The billing system failed to process usage records for the current cycle, likely due to a rating engine configuration error or provisioning system mismatch.\n\nREASONING:\n1. Customer has active services (tenure > 0) but MonthlyCharges = $0.00\n2. This pattern matches billing pipeline failure or provisioning sync issues\n3. The most common cause is a rating engine misconfiguration after a system upgrade\n4. Evidence from [cdr_failure_playbook.md] supports this diagnosis\n\nEVIDENCE:\n- [cdr_failure_playbook.md]: t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for an account with tenure > 0\n- **Secondary:** StreamingTV = 'Yes' OR StreamingMovies = 'Yes' (streaming service accounts are disproportionately affected)\n\nCITATIONS: [zero_billing_playbook.md]\n\nCONFIDENCE: HIGH",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-ZB-003",
+      "anomaly_type": "zero_billing",
+      "root_cause": "Billing processing pipeline failure resulting in zero-rated billing records. The billing system failed to process usage records for the current cycle, likely due to a rating engine configuration error or provisioning system mismatch.",
+      "supporting_evidence": [
+        "cdr_failure_playbook.md: t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for a...",
+        "duplicate_charge_playbook.md: ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediat...",
+        "duplicate_charge_playbook.md: customers with complex service bundles.\n**Investigation Steps:** 1. Check the mediation layer's delivery acknowledgement logs\n2. Compare rating engine..."
+      ],
+      "recommended_actions": [
+        "Trigger billing record reprocessing for affected account",
+        "Verify billing pipeline health for batch processing window",
+        "Issue corrective billing statement to customer",
+        "Add monitoring alert for zero-billing anomaly rate in MLflow"
+      ],
+      "severity": "HIGH",
+      "confidence_score": 0.82,
+      "summary": "A zero-billing anomaly was detected for account ABL-ZB-003. The customer has active services but was charged $0.00 for the current billing cycle. Root cause analysis indicates a billing processing pipeline failure or rating engine misconfiguration. Immediate billing record reprocessing and corrective billing are recommended."
+    },
+    "latency_ms": 110.58259010314941,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-DC-001",
+      "ground_truth_id": "DC-001",
+      "anomaly_type": "duplicate_charge",
+      "confidence": 0.82,
+      "monthly_charges": 319.8,
+      "total_charges": 5448.197592930262,
+      "tenure": 6,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "One year"
+      }
+    },
+    "retrieved_docs": [],
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "vector_first",
+    "routing_explanation": "Anomaly type 'duplicate_charge' is best matched via semantic pattern search. Vector-first retrieval selected: dense + BM25 hybrid with RRF fusion across all RCA playbook content.",
+    "retrieval_query": "duplicate charge billing deduplication failure retry logic idempotency",
+    "hypothesis": "ROOT CAUSE: Charge deduplication engine failure allowing duplicate billing records to pass through to the rating engine, resulting in double-billed charges.\n\nREASONING:\n1. Customer billed at approximately 2x normal monthly charges\n2. This pattern matches deduplication failure or billing batch re-transmission\n3. Billing system retry logic may have caused duplicate charge posting\n4. Evidence from [N/A] supports this diagnosis\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [duplicate_charge_playbook.md]\n\nCONFIDENCE: HIGH",
+    "reasoning_chain": "ROOT CAUSE: Charge deduplication engine failure allowing duplicate billing records to pass through to the rating engine, resulting in double-billed charges.\n\nREASONING:\n1. Customer billed at approximately 2x normal monthly charges\n2. This pattern matches deduplication failure or billing batch re-transmission\n3. Billing system retry logic may have caused duplicate charge posting\n4. Evidence from [N/A] supports this diagnosis\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [duplicate_charge_playbook.md]\n\nCONFIDENCE: HIGH",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-DC-001",
+      "anomaly_type": "duplicate_charge",
+      "root_cause": "Charge deduplication engine failure allowing duplicate billing records to pass through to the rating engine, resulting in double-billed charges.",
+      "supporting_evidence": [
+        "No specific evidence retrieved"
+      ],
+      "recommended_actions": [
+        "Reverse duplicate charges immediately",
+        "Audit and repair charge deduplication engine",
+        "Implement transaction-level idempotency in billing retry logic",
+        "Add real-time monitoring for duplicate charge rate"
+      ],
+      "severity": "HIGH",
+      "confidence_score": 0.82,
+      "summary": "A duplicate charge was detected for account ABL-DC-001. The customer was billed approximately double (319.80) the expected amount. Root cause analysis indicates a charge deduplication or billing retry logic failure. Immediate charge reversal and system fix are recommended."
+    },
+    "latency_ms": 154.09612655639648,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-DC-002",
+      "ground_truth_id": "DC-002",
+      "anomaly_type": "duplicate_charge",
+      "confidence": 0.9,
+      "monthly_charges": 530.0,
+      "total_charges": 4675.678388654929,
+      "tenure": 6,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "Two year"
+      }
+    },
+    "retrieved_docs": [],
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "vector_first",
+    "routing_explanation": "Anomaly type 'duplicate_charge' is best matched via semantic pattern search. Vector-first retrieval selected: dense + BM25 hybrid with RRF fusion across all RCA playbook content.",
+    "retrieval_query": "duplicate charge billing deduplication failure retry logic idempotency",
+    "hypothesis": "ROOT CAUSE: Charge deduplication engine failure allowing duplicate billing records to pass through to the rating engine, resulting in double-billed charges.\n\nREASONING:\n1. Customer billed at approximately 2x normal monthly charges\n2. This pattern matches deduplication failure or billing batch re-transmission\n3. Billing system retry logic may have caused duplicate charge posting\n4. Evidence from [N/A] supports this diagnosis\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [duplicate_charge_playbook.md]\n\nCONFIDENCE: HIGH",
+    "reasoning_chain": "ROOT CAUSE: Charge deduplication engine failure allowing duplicate billing records to pass through to the rating engine, resulting in double-billed charges.\n\nREASONING:\n1. Customer billed at approximately 2x normal monthly charges\n2. This pattern matches deduplication failure or billing batch re-transmission\n3. Billing system retry logic may have caused duplicate charge posting\n4. Evidence from [N/A] supports this diagnosis\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [duplicate_charge_playbook.md]\n\nCONFIDENCE: HIGH",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-DC-002",
+      "anomaly_type": "duplicate_charge",
+      "root_cause": "Charge deduplication engine failure allowing duplicate billing records to pass through to the rating engine, resulting in double-billed charges.",
+      "supporting_evidence": [
+        "No specific evidence retrieved"
+      ],
+      "recommended_actions": [
+        "Reverse duplicate charges immediately",
+        "Audit and repair charge deduplication engine",
+        "Implement transaction-level idempotency in billing retry logic",
+        "Add real-time monitoring for duplicate charge rate"
+      ],
+      "severity": "HIGH",
+      "confidence_score": 0.9,
+      "summary": "A duplicate charge was detected for account ABL-DC-002. The customer was billed approximately double (530.00) the expected amount. Root cause analysis indicates a charge deduplication or billing retry logic failure. Immediate charge reversal and system fix are recommended."
+    },
+    "latency_ms": 186.61165237426758,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-DC-003",
+      "ground_truth_id": "DC-003",
+      "anomaly_type": "duplicate_charge",
+      "confidence": 0.91,
+      "monthly_charges": 179.0,
+      "total_charges": 7729.266304167905,
+      "tenure": 60,
+      "features": {
+        "InternetService": "DSL",
+        "Contract": "Month-to-month"
+      }
+    },
+    "retrieved_docs": [],
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "vector_first",
+    "routing_explanation": "Anomaly type 'duplicate_charge' is best matched via semantic pattern search. Vector-first retrieval selected: dense + BM25 hybrid with RRF fusion across all RCA playbook content.",
+    "retrieval_query": "duplicate charge billing deduplication failure retry logic idempotency",
+    "hypothesis": "ROOT CAUSE: Charge deduplication engine failure allowing duplicate billing records to pass through to the rating engine, resulting in double-billed charges.\n\nREASONING:\n1. Customer billed at approximately 2x normal monthly charges\n2. This pattern matches deduplication failure or billing batch re-transmission\n3. Billing system retry logic may have caused duplicate charge posting\n4. Evidence from [N/A] supports this diagnosis\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [duplicate_charge_playbook.md]\n\nCONFIDENCE: HIGH",
+    "reasoning_chain": "ROOT CAUSE: Charge deduplication engine failure allowing duplicate billing records to pass through to the rating engine, resulting in double-billed charges.\n\nREASONING:\n1. Customer billed at approximately 2x normal monthly charges\n2. This pattern matches deduplication failure or billing batch re-transmission\n3. Billing system retry logic may have caused duplicate charge posting\n4. Evidence from [N/A] supports this diagnosis\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [duplicate_charge_playbook.md]\n\nCONFIDENCE: HIGH",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-DC-003",
+      "anomaly_type": "duplicate_charge",
+      "root_cause": "Charge deduplication engine failure allowing duplicate billing records to pass through to the rating engine, resulting in double-billed charges.",
+      "supporting_evidence": [
+        "No specific evidence retrieved"
+      ],
+      "recommended_actions": [
+        "Reverse duplicate charges immediately",
+        "Audit and repair charge deduplication engine",
+        "Implement transaction-level idempotency in billing retry logic",
+        "Add real-time monitoring for duplicate charge rate"
+      ],
+      "severity": "HIGH",
+      "confidence_score": 0.91,
+      "summary": "A duplicate charge was detected for account ABL-DC-003. The customer was billed approximately double (179.00) the expected amount. Root cause analysis indicates a charge deduplication or billing retry logic failure. Immediate charge reversal and system fix are recommended."
+    },
+    "latency_ms": 135.1320743560791,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-US-001",
+      "ground_truth_id": "US-001",
+      "anomaly_type": "usage_spike",
+      "confidence": 0.93,
+      "monthly_charges": 1100.0,
+      "total_charges": 3084.035062537314,
+      "tenure": 23,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "Month-to-month"
+      }
+    },
+    "retrieved_docs": [],
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "vector_first",
+    "routing_explanation": "Anomaly type 'usage_spike' is best matched via semantic pattern search. Vector-first retrieval selected: dense + BM25 hybrid with RRF fusion across all RCA playbook content.",
+    "retrieval_query": "usage spike Fiber optic internet service charges rate card roaming overage",
+    "hypothesis": "ROOT CAUSE: Abnormal usage spike detected \u2014 possible causes include roaming charges not capped per contract, streaming service miscategorised as premium tier, or rating plan not updated after service upgrade.\n\nREASONING:\n1. Customer MonthlyCharges increased ~10x above historical baseline\n2. IBM Telco pattern: Fiber optic internet service customers at high tenure are most affected\n3. If multiple customers on same plan affected: likely rating plan error\n4. If single customer: likely incorrect rate card application\n5. Evidence from [N/A] supports investigation approach\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [usage_spike_playbook.md]\n\nCONFIDENCE: MEDIUM",
+    "reasoning_chain": "ROOT CAUSE: Abnormal usage spike detected \u2014 possible causes include roaming charges not capped per contract, streaming service miscategorised as premium tier, or rating plan not updated after service upgrade.\n\nREASONING:\n1. Customer MonthlyCharges increased ~10x above historical baseline\n2. IBM Telco pattern: Fiber optic internet service customers at high tenure are most affected\n3. If multiple customers on same plan affected: likely rating plan error\n4. If single customer: likely incorrect rate card application\n5. Evidence from [N/A] supports investigation approach\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [usage_spike_playbook.md]\n\nCONFIDENCE: MEDIUM",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-US-001",
+      "anomaly_type": "usage_spike",
+      "root_cause": "Abnormal usage spike detected \u2014 possible causes include roaming charges not capped per contract, streaming service miscategorised as premium tier, or rating plan not updated after service upgrade.",
+      "supporting_evidence": [
+        "No specific evidence retrieved"
+      ],
+      "recommended_actions": [
+        "Cross-reference with fraud detection system",
+        "Verify usage location and pattern legitimacy",
+        "Check rating engine accuracy for affected plan and rate card version",
+        "Ensure bill shock notification compliance for internet service customers"
+      ],
+      "severity": "MEDIUM",
+      "confidence_score": 0.93,
+      "summary": "An abnormal usage spike was detected for account ABL-US-001. Monthly charges (1100.00) are approximately 10x the historical baseline. Investigation needed to determine if this is a rate card error, roaming overage, or service miscategorisation. Cross-reference with billing records and verify rating plan accuracy."
+    },
+    "latency_ms": 370.9268569946289,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-US-002",
+      "ground_truth_id": "US-002",
+      "anomaly_type": "usage_spike",
+      "confidence": 0.97,
+      "monthly_charges": 1100.0,
+      "total_charges": 1766.5770738988654,
+      "tenure": 30,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "Month-to-month"
+      }
+    },
+    "retrieved_docs": [],
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "vector_first",
+    "routing_explanation": "Anomaly type 'usage_spike' is best matched via semantic pattern search. Vector-first retrieval selected: dense + BM25 hybrid with RRF fusion across all RCA playbook content.",
+    "retrieval_query": "usage spike Fiber optic internet service charges rate card roaming overage",
+    "hypothesis": "ROOT CAUSE: Abnormal usage spike detected \u2014 possible causes include roaming charges not capped per contract, streaming service miscategorised as premium tier, or rating plan not updated after service upgrade.\n\nREASONING:\n1. Customer MonthlyCharges increased ~10x above historical baseline\n2. IBM Telco pattern: Fiber optic internet service customers at high tenure are most affected\n3. If multiple customers on same plan affected: likely rating plan error\n4. If single customer: likely incorrect rate card application\n5. Evidence from [N/A] supports investigation approach\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [usage_spike_playbook.md]\n\nCONFIDENCE: MEDIUM",
+    "reasoning_chain": "ROOT CAUSE: Abnormal usage spike detected \u2014 possible causes include roaming charges not capped per contract, streaming service miscategorised as premium tier, or rating plan not updated after service upgrade.\n\nREASONING:\n1. Customer MonthlyCharges increased ~10x above historical baseline\n2. IBM Telco pattern: Fiber optic internet service customers at high tenure are most affected\n3. If multiple customers on same plan affected: likely rating plan error\n4. If single customer: likely incorrect rate card application\n5. Evidence from [N/A] supports investigation approach\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [usage_spike_playbook.md]\n\nCONFIDENCE: MEDIUM",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-US-002",
+      "anomaly_type": "usage_spike",
+      "root_cause": "Abnormal usage spike detected \u2014 possible causes include roaming charges not capped per contract, streaming service miscategorised as premium tier, or rating plan not updated after service upgrade.",
+      "supporting_evidence": [
+        "No specific evidence retrieved"
+      ],
+      "recommended_actions": [
+        "Cross-reference with fraud detection system",
+        "Verify usage location and pattern legitimacy",
+        "Check rating engine accuracy for affected plan and rate card version",
+        "Ensure bill shock notification compliance for internet service customers"
+      ],
+      "severity": "MEDIUM",
+      "confidence_score": 0.97,
+      "summary": "An abnormal usage spike was detected for account ABL-US-002. Monthly charges (1100.00) are approximately 10x the historical baseline. Investigation needed to determine if this is a rate card error, roaming overage, or service miscategorisation. Cross-reference with billing records and verify rating plan accuracy."
+    },
+    "latency_ms": 146.8222141265869,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-US-003",
+      "ground_truth_id": "US-003",
+      "anomaly_type": "usage_spike",
+      "confidence": 0.82,
+      "monthly_charges": 1100.0,
+      "total_charges": 5527.945235251683,
+      "tenure": 51,
+      "features": {
+        "InternetService": "DSL",
+        "Contract": "One year"
+      }
+    },
+    "retrieved_docs": [],
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "vector_first",
+    "routing_explanation": "Anomaly type 'usage_spike' is best matched via semantic pattern search. Vector-first retrieval selected: dense + BM25 hybrid with RRF fusion across all RCA playbook content.",
+    "retrieval_query": "usage spike Fiber optic internet service charges rate card roaming overage",
+    "hypothesis": "ROOT CAUSE: Abnormal usage spike detected \u2014 possible causes include roaming charges not capped per contract, streaming service miscategorised as premium tier, or rating plan not updated after service upgrade.\n\nREASONING:\n1. Customer MonthlyCharges increased ~10x above historical baseline\n2. IBM Telco pattern: Fiber optic internet service customers at high tenure are most affected\n3. If multiple customers on same plan affected: likely rating plan error\n4. If single customer: likely incorrect rate card application\n5. Evidence from [N/A] supports investigation approach\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [usage_spike_playbook.md]\n\nCONFIDENCE: MEDIUM",
+    "reasoning_chain": "ROOT CAUSE: Abnormal usage spike detected \u2014 possible causes include roaming charges not capped per contract, streaming service miscategorised as premium tier, or rating plan not updated after service upgrade.\n\nREASONING:\n1. Customer MonthlyCharges increased ~10x above historical baseline\n2. IBM Telco pattern: Fiber optic internet service customers at high tenure are most affected\n3. If multiple customers on same plan affected: likely rating plan error\n4. If single customer: likely incorrect rate card application\n5. Evidence from [N/A] supports investigation approach\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [usage_spike_playbook.md]\n\nCONFIDENCE: MEDIUM",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-US-003",
+      "anomaly_type": "usage_spike",
+      "root_cause": "Abnormal usage spike detected \u2014 possible causes include roaming charges not capped per contract, streaming service miscategorised as premium tier, or rating plan not updated after service upgrade.",
+      "supporting_evidence": [
+        "No specific evidence retrieved"
+      ],
+      "recommended_actions": [
+        "Cross-reference with fraud detection system",
+        "Verify usage location and pattern legitimacy",
+        "Check rating engine accuracy for affected plan and rate card version",
+        "Ensure bill shock notification compliance for internet service customers"
+      ],
+      "severity": "MEDIUM",
+      "confidence_score": 0.82,
+      "summary": "An abnormal usage spike was detected for account ABL-US-003. Monthly charges (1100.00) are approximately 10x the historical baseline. Investigation needed to determine if this is a rate card error, roaming overage, or service miscategorisation. Cross-reference with billing records and verify rating plan accuracy."
+    },
+    "latency_ms": 200.98066329956055,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-CF-001",
+      "ground_truth_id": "CF-001",
+      "anomaly_type": "cdr_failure",
+      "confidence": 0.93,
+      "monthly_charges": 0.0,
+      "total_charges": 0.0,
+      "tenure": 8,
+      "features": {
+        "InternetService": "DSL",
+        "Contract": "Month-to-month"
+      }
+    },
+    "retrieved_docs": [
+      {
+        "text": "ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediate billing mediation layer re-transmitted already-processed billing records due to a delivery acknowledgement failure, causing the rating engine to process them twice.\n**Indicators:** The same usage record appears twice in the rating engine's input queue with identical timestamps. MonthlyCharges = 2\u00d7 normal specifically for customers with complex service bundles.\n**Investigation Steps:**",
+        "source": "duplicate_charge_playbook.md",
+        "relevance_score": 0.55,
+        "metadata": {
+          "source": "duplicate_charge_playbook.md",
+          "chunk_id": "c0030",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "es) narrows the investigation to the correct account population. ## Recommended Actions\n\n1. Identify all accounts with NaN charges in the current billing cycle \u2014 group by service bundle\n2. Determine whether the failure is pipeline-wide (batch failure) or bundle-specific (rating error)\n3. Reprocess billing records for all affected accounts after fixing the root cause\n4. Add MLflow alert: billing_record_failure_rate > 0.001 (0.1%) triggers escalation",
+        "source": "cdr_failure_playbook.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "cdr_failure_playbook.md",
+          "chunk_id": "c0020",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for an account with tenure > 0\n- **Secondary:** StreamingTV = 'Yes' OR StreamingMovies = 'Yes' (streaming service accounts are disproportionately affected); InternetService = 'Fiber optic'\n- **Threshold:** IsolationForest treats NaN-filled (median-imputed) values as outliers with confidence > 0.88. SWARM routing: graph_first \u2014 billing system \u2192 ingestion pipeline \u2192 bundle rating engine is a multi-hop causal chain.",
+        "source": "cdr_failure_playbook.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "cdr_failure_playbook.md",
+          "chunk_id": "c0003",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "t activated without charge configuration \u2192 zero_billing anomaly. ### Stage 2: Usage and Charge Accumulation\nActive services accumulate charges throughout the billing cycle. Recurring charges: monthly plan fee + service add-ons. **Failure mode:** Bundle rating engine error \u2192 NaN MonthlyCharges for streaming customers \u2192 billing_record_failure anomaly.",
+        "source": "telecom_billing_overview.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "telecom_billing_overview.md",
+          "chunk_id": "c0099",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "## SWARM Routing Decision Map | Anomaly Type | Retrieval Strategy | Rationale |\n|---|---|---|\n| zero_billing | graph_first | Multi-hop: provisioning \u2192 billing config \u2192 rating engine \u2192 invoice |\n| billing_record_failure | graph_first | Multi-hop: service catalogue \u2192 bundle rating \u2192 pipeline \u2192 charge record |\n| duplicate_charge | vector_first | Pattern matching: idempotency failure signatures in billing history |\n| usage_spike | vector_first | Pattern matching: rate card anomalies vs. historical charge profile |",
+        "source": "telecom_billing_overview.md",
+        "relevance_score": 0.45,
+        "metadata": {
+          "source": "telecom_billing_overview.md",
+          "chunk_id": "c0109",
+          "retrieval_mode": "graph_rag"
+        }
+      }
+    ],
+    "retrieval_count": 5,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "graph_first",
+    "routing_explanation": "Anomaly type 'cdr_failure' requires multi-hop causal reasoning (billing system \u2192 component \u2192 error code \u2192 fix). Graph-first traversal selected: seeds the knowledge graph at the anomaly node and follows causal edges via 2-hop BFS.",
+    "retrieval_query": "billing record failure NULL charges streaming service bundle rating pipeline",
+    "hypothesis": "ROOT CAUSE: Billing record ingestion pipeline failure resulting in NULL/missing values in customer billing records. Likely caused by service bundle rating failure or billing cycle batch job failure on multi-service accounts.\n\nREASONING:\n1. Critical billing fields contain NULL/NaN values\n2. Customer has active streaming services (StreamingTV or StreamingMovies = Yes)\n3. Billing pipeline failed to persist complete records for bundle-rated accounts\n4. Evidence from [duplicate_charge_playbook.md] provides resolution steps\n\nEVIDENCE:\n- [duplicate_charge_playbook.md]: ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediate billing mediation layer re-transmitted already-processed billing records due to a delivery acknowledgement failure, causing the rating engine to pro\n\nCITATIONS: [cdr_failure_playbook.md]\n\nCONFIDENCE: HIGH",
+    "reasoning_chain": "ROOT CAUSE: Billing record ingestion pipeline failure resulting in NULL/missing values in customer billing records. Likely caused by service bundle rating failure or billing cycle batch job failure on multi-service accounts.\n\nREASONING:\n1. Critical billing fields contain NULL/NaN values\n2. Customer has active streaming services (StreamingTV or StreamingMovies = Yes)\n3. Billing pipeline failed to persist complete records for bundle-rated accounts\n4. Evidence from [duplicate_charge_playbook.md] provides resolution steps\n\nEVIDENCE:\n- [duplicate_charge_playbook.md]: ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediate billing mediation layer re-transmitted already-processed billing records due to a delivery acknowledgement failure, causing the rating engine to pro\n\nCITATIONS: [cdr_failure_playbook.md]\n\nCONFIDENCE: HIGH",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-CF-001",
+      "anomaly_type": "cdr_failure",
+      "root_cause": "Billing record ingestion pipeline failure resulting in NULL/missing values in customer billing records. Likely caused by service bundle rating failure or billing cycle batch job failure on multi-service accounts.",
+      "supporting_evidence": [
+        "duplicate_charge_playbook.md: ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediat...",
+        "cdr_failure_playbook.md: es) narrows the investigation to the correct account population. ## Recommended Actions\n\n1. Identify all accounts with NaN charges in the current bill...",
+        "cdr_failure_playbook.md: t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for a..."
+      ],
+      "recommended_actions": [
+        "Identify root cause from billing pipeline error logs",
+        "Check recent system upgrades or configuration changes",
+        "Reprocess all failed billing records after pipeline fix",
+        "Add automated billing record processing success rate monitoring"
+      ],
+      "severity": "HIGH",
+      "confidence_score": 0.93,
+      "summary": "A billing record failure was detected for account ABL-CF-001. Critical billing fields contain NULL/missing values indicating incomplete billing record processing. Root cause analysis points to billing pipeline ingestion failure (bundle rating error or batch job failure). Immediate billing record reprocessing and pipeline health verification required."
+    },
+    "latency_ms": 118.25060844421387,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-CF-002",
+      "ground_truth_id": "CF-002",
+      "anomaly_type": "cdr_failure",
+      "confidence": 0.82,
+      "monthly_charges": 0.0,
+      "total_charges": 0.0,
+      "tenure": 71,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "One year"
+      }
+    },
+    "retrieved_docs": [
+      {
+        "text": "ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediate billing mediation layer re-transmitted already-processed billing records due to a delivery acknowledgement failure, causing the rating engine to process them twice.\n**Indicators:** The same usage record appears twice in the rating engine's input queue with identical timestamps. MonthlyCharges = 2\u00d7 normal specifically for customers with complex service bundles.\n**Investigation Steps:**",
+        "source": "duplicate_charge_playbook.md",
+        "relevance_score": 0.55,
+        "metadata": {
+          "source": "duplicate_charge_playbook.md",
+          "chunk_id": "c0030",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "es) narrows the investigation to the correct account population. ## Recommended Actions\n\n1. Identify all accounts with NaN charges in the current billing cycle \u2014 group by service bundle\n2. Determine whether the failure is pipeline-wide (batch failure) or bundle-specific (rating error)\n3. Reprocess billing records for all affected accounts after fixing the root cause\n4. Add MLflow alert: billing_record_failure_rate > 0.001 (0.1%) triggers escalation",
+        "source": "cdr_failure_playbook.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "cdr_failure_playbook.md",
+          "chunk_id": "c0020",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for an account with tenure > 0\n- **Secondary:** StreamingTV = 'Yes' OR StreamingMovies = 'Yes' (streaming service accounts are disproportionately affected); InternetService = 'Fiber optic'\n- **Threshold:** IsolationForest treats NaN-filled (median-imputed) values as outliers with confidence > 0.88. SWARM routing: graph_first \u2014 billing system \u2192 ingestion pipeline \u2192 bundle rating engine is a multi-hop causal chain.",
+        "source": "cdr_failure_playbook.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "cdr_failure_playbook.md",
+          "chunk_id": "c0003",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "t activated without charge configuration \u2192 zero_billing anomaly. ### Stage 2: Usage and Charge Accumulation\nActive services accumulate charges throughout the billing cycle. Recurring charges: monthly plan fee + service add-ons. **Failure mode:** Bundle rating engine error \u2192 NaN MonthlyCharges for streaming customers \u2192 billing_record_failure anomaly.",
+        "source": "telecom_billing_overview.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "telecom_billing_overview.md",
+          "chunk_id": "c0099",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "## SWARM Routing Decision Map | Anomaly Type | Retrieval Strategy | Rationale |\n|---|---|---|\n| zero_billing | graph_first | Multi-hop: provisioning \u2192 billing config \u2192 rating engine \u2192 invoice |\n| billing_record_failure | graph_first | Multi-hop: service catalogue \u2192 bundle rating \u2192 pipeline \u2192 charge record |\n| duplicate_charge | vector_first | Pattern matching: idempotency failure signatures in billing history |\n| usage_spike | vector_first | Pattern matching: rate card anomalies vs. historical charge profile |",
+        "source": "telecom_billing_overview.md",
+        "relevance_score": 0.45,
+        "metadata": {
+          "source": "telecom_billing_overview.md",
+          "chunk_id": "c0109",
+          "retrieval_mode": "graph_rag"
+        }
+      }
+    ],
+    "retrieval_count": 5,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "graph_first",
+    "routing_explanation": "Anomaly type 'cdr_failure' requires multi-hop causal reasoning (billing system \u2192 component \u2192 error code \u2192 fix). Graph-first traversal selected: seeds the knowledge graph at the anomaly node and follows causal edges via 2-hop BFS.",
+    "retrieval_query": "billing record failure NULL charges streaming service bundle rating pipeline",
+    "hypothesis": "ROOT CAUSE: Billing record ingestion pipeline failure resulting in NULL/missing values in customer billing records. Likely caused by service bundle rating failure or billing cycle batch job failure on multi-service accounts.\n\nREASONING:\n1. Critical billing fields contain NULL/NaN values\n2. Customer has active streaming services (StreamingTV or StreamingMovies = Yes)\n3. Billing pipeline failed to persist complete records for bundle-rated accounts\n4. Evidence from [duplicate_charge_playbook.md] provides resolution steps\n\nEVIDENCE:\n- [duplicate_charge_playbook.md]: ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediate billing mediation layer re-transmitted already-processed billing records due to a delivery acknowledgement failure, causing the rating engine to pro\n\nCITATIONS: [cdr_failure_playbook.md]\n\nCONFIDENCE: HIGH",
+    "reasoning_chain": "ROOT CAUSE: Billing record ingestion pipeline failure resulting in NULL/missing values in customer billing records. Likely caused by service bundle rating failure or billing cycle batch job failure on multi-service accounts.\n\nREASONING:\n1. Critical billing fields contain NULL/NaN values\n2. Customer has active streaming services (StreamingTV or StreamingMovies = Yes)\n3. Billing pipeline failed to persist complete records for bundle-rated accounts\n4. Evidence from [duplicate_charge_playbook.md] provides resolution steps\n\nEVIDENCE:\n- [duplicate_charge_playbook.md]: ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediate billing mediation layer re-transmitted already-processed billing records due to a delivery acknowledgement failure, causing the rating engine to pro\n\nCITATIONS: [cdr_failure_playbook.md]\n\nCONFIDENCE: HIGH",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-CF-002",
+      "anomaly_type": "cdr_failure",
+      "root_cause": "Billing record ingestion pipeline failure resulting in NULL/missing values in customer billing records. Likely caused by service bundle rating failure or billing cycle batch job failure on multi-service accounts.",
+      "supporting_evidence": [
+        "duplicate_charge_playbook.md: ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediat...",
+        "cdr_failure_playbook.md: es) narrows the investigation to the correct account population. ## Recommended Actions\n\n1. Identify all accounts with NaN charges in the current bill...",
+        "cdr_failure_playbook.md: t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for a..."
+      ],
+      "recommended_actions": [
+        "Identify root cause from billing pipeline error logs",
+        "Check recent system upgrades or configuration changes",
+        "Reprocess all failed billing records after pipeline fix",
+        "Add automated billing record processing success rate monitoring"
+      ],
+      "severity": "HIGH",
+      "confidence_score": 0.82,
+      "summary": "A billing record failure was detected for account ABL-CF-002. Critical billing fields contain NULL/missing values indicating incomplete billing record processing. Root cause analysis points to billing pipeline ingestion failure (bundle rating error or batch job failure). Immediate billing record reprocessing and pipeline health verification required."
+    },
+    "latency_ms": 116.32943153381348,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-CF-003",
+      "ground_truth_id": "CF-003",
+      "anomaly_type": "cdr_failure",
+      "confidence": 0.81,
+      "monthly_charges": 0.0,
+      "total_charges": 0.0,
+      "tenure": 51,
+      "features": {
+        "InternetService": "DSL",
+        "Contract": "Month-to-month"
+      }
+    },
+    "retrieved_docs": [
+      {
+        "text": "ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediate billing mediation layer re-transmitted already-processed billing records due to a delivery acknowledgement failure, causing the rating engine to process them twice.\n**Indicators:** The same usage record appears twice in the rating engine's input queue with identical timestamps. MonthlyCharges = 2\u00d7 normal specifically for customers with complex service bundles.\n**Investigation Steps:**",
+        "source": "duplicate_charge_playbook.md",
+        "relevance_score": 0.55,
+        "metadata": {
+          "source": "duplicate_charge_playbook.md",
+          "chunk_id": "c0030",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "es) narrows the investigation to the correct account population. ## Recommended Actions\n\n1. Identify all accounts with NaN charges in the current billing cycle \u2014 group by service bundle\n2. Determine whether the failure is pipeline-wide (batch failure) or bundle-specific (rating error)\n3. Reprocess billing records for all affected accounts after fixing the root cause\n4. Add MLflow alert: billing_record_failure_rate > 0.001 (0.1%) triggers escalation",
+        "source": "cdr_failure_playbook.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "cdr_failure_playbook.md",
+          "chunk_id": "c0020",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for an account with tenure > 0\n- **Secondary:** StreamingTV = 'Yes' OR StreamingMovies = 'Yes' (streaming service accounts are disproportionately affected); InternetService = 'Fiber optic'\n- **Threshold:** IsolationForest treats NaN-filled (median-imputed) values as outliers with confidence > 0.88. SWARM routing: graph_first \u2014 billing system \u2192 ingestion pipeline \u2192 bundle rating engine is a multi-hop causal chain.",
+        "source": "cdr_failure_playbook.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "cdr_failure_playbook.md",
+          "chunk_id": "c0003",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "t activated without charge configuration \u2192 zero_billing anomaly. ### Stage 2: Usage and Charge Accumulation\nActive services accumulate charges throughout the billing cycle. Recurring charges: monthly plan fee + service add-ons. **Failure mode:** Bundle rating engine error \u2192 NaN MonthlyCharges for streaming customers \u2192 billing_record_failure anomaly.",
+        "source": "telecom_billing_overview.md",
+        "relevance_score": 0.5,
+        "metadata": {
+          "source": "telecom_billing_overview.md",
+          "chunk_id": "c0099",
+          "retrieval_mode": "graph_rag"
+        }
+      },
+      {
+        "text": "## SWARM Routing Decision Map | Anomaly Type | Retrieval Strategy | Rationale |\n|---|---|---|\n| zero_billing | graph_first | Multi-hop: provisioning \u2192 billing config \u2192 rating engine \u2192 invoice |\n| billing_record_failure | graph_first | Multi-hop: service catalogue \u2192 bundle rating \u2192 pipeline \u2192 charge record |\n| duplicate_charge | vector_first | Pattern matching: idempotency failure signatures in billing history |\n| usage_spike | vector_first | Pattern matching: rate card anomalies vs. historical charge profile |",
+        "source": "telecom_billing_overview.md",
+        "relevance_score": 0.45,
+        "metadata": {
+          "source": "telecom_billing_overview.md",
+          "chunk_id": "c0109",
+          "retrieval_mode": "graph_rag"
+        }
+      }
+    ],
+    "retrieval_count": 5,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "graph_first",
+    "routing_explanation": "Anomaly type 'cdr_failure' requires multi-hop causal reasoning (billing system \u2192 component \u2192 error code \u2192 fix). Graph-first traversal selected: seeds the knowledge graph at the anomaly node and follows causal edges via 2-hop BFS.",
+    "retrieval_query": "billing record failure NULL charges streaming service bundle rating pipeline",
+    "hypothesis": "ROOT CAUSE: Billing record ingestion pipeline failure resulting in NULL/missing values in customer billing records. Likely caused by service bundle rating failure or billing cycle batch job failure on multi-service accounts.\n\nREASONING:\n1. Critical billing fields contain NULL/NaN values\n2. Customer has active streaming services (StreamingTV or StreamingMovies = Yes)\n3. Billing pipeline failed to persist complete records for bundle-rated accounts\n4. Evidence from [duplicate_charge_playbook.md] provides resolution steps\n\nEVIDENCE:\n- [duplicate_charge_playbook.md]: ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediate billing mediation layer re-transmitted already-processed billing records due to a delivery acknowledgement failure, causing the rating engine to pro\n\nCITATIONS: [cdr_failure_playbook.md]\n\nCONFIDENCE: HIGH",
+    "reasoning_chain": "ROOT CAUSE: Billing record ingestion pipeline failure resulting in NULL/missing values in customer billing records. Likely caused by service bundle rating failure or billing cycle batch job failure on multi-service accounts.\n\nREASONING:\n1. Critical billing fields contain NULL/NaN values\n2. Customer has active streaming services (StreamingTV or StreamingMovies = Yes)\n3. Billing pipeline failed to persist complete records for bundle-rated accounts\n4. Evidence from [duplicate_charge_playbook.md] provides resolution steps\n\nEVIDENCE:\n- [duplicate_charge_playbook.md]: ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediate billing mediation layer re-transmitted already-processed billing records due to a delivery acknowledgement failure, causing the rating engine to pro\n\nCITATIONS: [cdr_failure_playbook.md]\n\nCONFIDENCE: HIGH",
+    "critic_attempts": 2,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-CF-003",
+      "anomaly_type": "cdr_failure",
+      "root_cause": "Billing record ingestion pipeline failure resulting in NULL/missing values in customer billing records. Likely caused by service bundle rating failure or billing cycle batch job failure on multi-service accounts.",
+      "supporting_evidence": [
+        "duplicate_charge_playbook.md: ob comparing billing records to payment processor records daily. ### 4. Billing Record Mediation Layer Re-Transmission\n**Description:** An intermediat...",
+        "cdr_failure_playbook.md: es) narrows the investigation to the correct account population. ## Recommended Actions\n\n1. Identify all accounts with NaN charges in the current bill...",
+        "cdr_failure_playbook.md: t an active customer whose billing history has been interrupted. ## Detection Signals\n\n- **Primary:** MonthlyCharges = NaN OR TotalCharges = NaN for a..."
+      ],
+      "recommended_actions": [
+        "Identify root cause from billing pipeline error logs",
+        "Check recent system upgrades or configuration changes",
+        "Reprocess all failed billing records after pipeline fix",
+        "Add automated billing record processing success rate monitoring"
+      ],
+      "severity": "HIGH",
+      "confidence_score": 0.81,
+      "summary": "A billing record failure was detected for account ABL-CF-003. Critical billing fields contain NULL/missing values indicating incomplete billing record processing. Root cause analysis points to billing pipeline ingestion failure (bundle rating error or batch job failure). Immediate billing record reprocessing and pipeline health verification required."
+    },
+    "latency_ms": 744.5650100708008,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-SB-001",
+      "ground_truth_id": "SB-001",
+      "anomaly_type": "sla_breach",
+      "confidence": 0.95,
+      "monthly_charges": 410.0,
+      "total_charges": 11854.517479368069,
+      "tenure": 40,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "Two year"
+      }
+    },
+    "retrieved_docs": [],
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "vector_first",
+    "routing_explanation": "Anomaly type 'sla_breach' is best matched via semantic pattern search. Vector-first retrieval selected: dense + BM25 hybrid with RRF fusion across all RCA playbook content.",
+    "retrieval_query": "SLA breach annual contract monthly charges P95 cap rate plan configuration",
+    "hypothesis": "ROOT CAUSE: Customer charges exceed contractual SLA cap (P95 \u00d7 1.5 threshold). Likely caused by rate plan change not reflected in SLA cap configuration, or billing engine using wrong rate card version.\n\nREASONING:\n1. Monthly charges significantly exceed normal range for this contract type\n2. IBM Telco pattern: annual/two-year contract customers are affected\n3. Contract threshold may not be applied in rating engine after plan migration\n4. Evidence from [N/A] provides diagnostic steps\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [sla_breach_playbook.md]\n\nCONFIDENCE: HIGH",
+    "reasoning_chain": "ROOT CAUSE: Customer charges exceed contractual SLA cap (P95 \u00d7 1.5 threshold). Likely caused by rate plan change not reflected in SLA cap configuration, or billing engine using wrong rate card version.\n\nREASONING:\n1. Monthly charges significantly exceed normal range for this contract type\n2. IBM Telco pattern: annual/two-year contract customers are affected\n3. Contract threshold may not be applied in rating engine after plan migration\n4. Evidence from [N/A] provides diagnostic steps\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [sla_breach_playbook.md]\n\nCONFIDENCE: HIGH",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-SB-001",
+      "anomaly_type": "sla_breach",
+      "root_cause": "Customer charges exceed contractual SLA cap (P95 \u00d7 1.5 threshold). Likely caused by rate plan change not reflected in SLA cap configuration, or billing engine using wrong rate card version.",
+      "supporting_evidence": [
+        "No specific evidence retrieved"
+      ],
+      "recommended_actions": [
+        "Verify customer contract terms and billing cap configuration",
+        "Compare actual charges against contractual SLA threshold (P95 \u00d7 1.5)",
+        "Issue corrective billing and SLA penalty credits",
+        "Update rate card configuration to prevent recurrence"
+      ],
+      "severity": "HIGH",
+      "confidence_score": 0.95,
+      "summary": "An SLA breach was detected for account ABL-SB-001. Monthly charges ($410.00) exceed contractual thresholds (P95 \u00d7 1.5 cap). Root cause analysis indicates rate plan not reflected in SLA cap configuration or billing engine using wrong rate card. Immediate corrective billing and SLA credit issuance required."
+    },
+    "latency_ms": 146.28028869628906,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-SB-002",
+      "ground_truth_id": "SB-002",
+      "anomaly_type": "sla_breach",
+      "confidence": 0.9,
+      "monthly_charges": 180.0,
+      "total_charges": 3458.243836556622,
+      "tenure": 49,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "One year"
+      }
+    },
+    "retrieved_docs": [],
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "vector_first",
+    "routing_explanation": "Anomaly type 'sla_breach' is best matched via semantic pattern search. Vector-first retrieval selected: dense + BM25 hybrid with RRF fusion across all RCA playbook content.",
+    "retrieval_query": "SLA breach annual contract monthly charges P95 cap rate plan configuration",
+    "hypothesis": "ROOT CAUSE: Customer charges exceed contractual SLA cap (P95 \u00d7 1.5 threshold). Likely caused by rate plan change not reflected in SLA cap configuration, or billing engine using wrong rate card version.\n\nREASONING:\n1. Monthly charges significantly exceed normal range for this contract type\n2. IBM Telco pattern: annual/two-year contract customers are affected\n3. Contract threshold may not be applied in rating engine after plan migration\n4. Evidence from [N/A] provides diagnostic steps\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [sla_breach_playbook.md]\n\nCONFIDENCE: HIGH",
+    "reasoning_chain": "ROOT CAUSE: Customer charges exceed contractual SLA cap (P95 \u00d7 1.5 threshold). Likely caused by rate plan change not reflected in SLA cap configuration, or billing engine using wrong rate card version.\n\nREASONING:\n1. Monthly charges significantly exceed normal range for this contract type\n2. IBM Telco pattern: annual/two-year contract customers are affected\n3. Contract threshold may not be applied in rating engine after plan migration\n4. Evidence from [N/A] provides diagnostic steps\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [sla_breach_playbook.md]\n\nCONFIDENCE: HIGH",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-SB-002",
+      "anomaly_type": "sla_breach",
+      "root_cause": "Customer charges exceed contractual SLA cap (P95 \u00d7 1.5 threshold). Likely caused by rate plan change not reflected in SLA cap configuration, or billing engine using wrong rate card version.",
+      "supporting_evidence": [
+        "No specific evidence retrieved"
+      ],
+      "recommended_actions": [
+        "Verify customer contract terms and billing cap configuration",
+        "Compare actual charges against contractual SLA threshold (P95 \u00d7 1.5)",
+        "Issue corrective billing and SLA penalty credits",
+        "Update rate card configuration to prevent recurrence"
+      ],
+      "severity": "HIGH",
+      "confidence_score": 0.9,
+      "summary": "An SLA breach was detected for account ABL-SB-002. Monthly charges ($180.00) exceed contractual thresholds (P95 \u00d7 1.5 cap). Root cause analysis indicates rate plan not reflected in SLA cap configuration or billing engine using wrong rate card. Immediate corrective billing and SLA credit issuance required."
+    },
+    "latency_ms": 140.5470371246338,
+    "trace_id": "no-op"
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-SB-003",
+      "ground_truth_id": "SB-003",
+      "anomaly_type": "sla_breach",
+      "confidence": 0.94,
+      "monthly_charges": 180.0,
+      "total_charges": 11553.177210151469,
+      "tenure": 32,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "Two year"
+      }
+    },
+    "retrieved_docs": [],
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "retrieval_strategy": "vector_first",
+    "routing_explanation": "Anomaly type 'sla_breach' is best matched via semantic pattern search. Vector-first retrieval selected: dense + BM25 hybrid with RRF fusion across all RCA playbook content.",
+    "retrieval_query": "SLA breach annual contract monthly charges P95 cap rate plan configuration",
+    "hypothesis": "ROOT CAUSE: Customer charges exceed contractual SLA cap (P95 \u00d7 1.5 threshold). Likely caused by rate plan change not reflected in SLA cap configuration, or billing engine using wrong rate card version.\n\nREASONING:\n1. Monthly charges significantly exceed normal range for this contract type\n2. IBM Telco pattern: annual/two-year contract customers are affected\n3. Contract threshold may not be applied in rating engine after plan migration\n4. Evidence from [N/A] provides diagnostic steps\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [sla_breach_playbook.md]\n\nCONFIDENCE: HIGH",
+    "reasoning_chain": "ROOT CAUSE: Customer charges exceed contractual SLA cap (P95 \u00d7 1.5 threshold). Likely caused by rate plan change not reflected in SLA cap configuration, or billing engine using wrong rate card version.\n\nREASONING:\n1. Monthly charges significantly exceed normal range for this contract type\n2. IBM Telco pattern: annual/two-year contract customers are affected\n3. Contract threshold may not be applied in rating engine after plan migration\n4. Evidence from [N/A] provides diagnostic steps\n\nEVIDENCE:\n- [N/A]: No evidence retrieved.\n\nCITATIONS: [sla_breach_playbook.md]\n\nCONFIDENCE: HIGH",
+    "critic_attempts": 1,
+    "critic_verdict": "accept",
+    "critic_reasons": [
+      "critic-llm-unavailable"
+    ],
+    "critic_confidence": 0.5,
+    "rca_report": {
+      "anomaly_id": "ABL-SB-003",
+      "anomaly_type": "sla_breach",
+      "root_cause": "Customer charges exceed contractual SLA cap (P95 \u00d7 1.5 threshold). Likely caused by rate plan change not reflected in SLA cap configuration, or billing engine using wrong rate card version.",
+      "supporting_evidence": [
+        "No specific evidence retrieved"
+      ],
+      "recommended_actions": [
+        "Verify customer contract terms and billing cap configuration",
+        "Compare actual charges against contractual SLA threshold (P95 \u00d7 1.5)",
+        "Issue corrective billing and SLA penalty credits",
+        "Update rate card configuration to prevent recurrence"
+      ],
+      "severity": "HIGH",
+      "confidence_score": 0.94,
+      "summary": "An SLA breach was detected for account ABL-SB-003. Monthly charges ($180.00) exceed contractual thresholds (P95 \u00d7 1.5 cap). Root cause analysis indicates rate plan not reflected in SLA cap configuration or billing engine using wrong rate card. Immediate corrective billing and SLA credit issuance required."
+    },
+    "latency_ms": 130.75923919677734,
+    "trace_id": "no-op"
+  }
+]

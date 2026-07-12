@@ -1,0 +1,347 @@
+[
+  {
+    "anomaly_data": {
+      "account_id": "ABL-ZB-001",
+      "ground_truth_id": "ZB-001",
+      "anomaly_type": "zero_billing",
+      "confidence": 0.8,
+      "monthly_charges": 0.0,
+      "total_charges": 1912.6612510301559,
+      "tenure": 17,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "Two year"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "zero_billing",
+      "root_cause": "The account ABL-ZB-001 has been flagged for zero billing despite having a total charge of $1912.66, indicating a potential issue with the monthly charge calculation or a missing charge record. The customer's contract and internet service features suggest that they should be incurring regular monthly charges. The discrepancy may be due to an error in the billing system or a missing charge for a specific service.",
+      "recommendation": "Review the billing system configuration and charge records for the account to identify the missing charge or calculation error, and update the monthly charge accordingly."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 1738.7678623199463
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-ZB-002",
+      "ground_truth_id": "ZB-002",
+      "anomaly_type": "zero_billing",
+      "confidence": 0.83,
+      "monthly_charges": 0.0,
+      "total_charges": 963.7234689432912,
+      "tenure": 31,
+      "features": {
+        "InternetService": "DSL",
+        "Contract": "Month-to-month"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "zero_billing",
+      "root_cause": "The account ABL-ZB-002 has been flagged as zero_billing despite having a total charge of $963.72, indicating a discrepancy between the monthly charges and total charges. This could be due to a missing or incorrect monthly charge calculation, potentially caused by a faulty billing script or incorrect data feed. The month-to-month contract and DSL internet service may also be contributing factors to this anomaly.",
+      "recommendation": "Review the billing script and data feed to ensure accurate monthly charge calculations, and verify the contract and service details for account ABL-ZB-002 to resolve the discrepancy."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 1077.8264999389648
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-ZB-003",
+      "ground_truth_id": "ZB-003",
+      "anomaly_type": "zero_billing",
+      "confidence": 0.82,
+      "monthly_charges": 0.0,
+      "total_charges": 2720.5700082689873,
+      "tenure": 72,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "One year"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "zero_billing",
+      "root_cause": "The account ABL-ZB-003 has been flagged for zero billing despite having a significant total charge, indicating a potential issue with the monthly charge calculation or a missing charge component. The presence of a fiber optic internet service and a one-year contract suggests that there should be a recurring monthly charge. The discrepancy may be due to an incorrect configuration or a technical glitch in the billing system.",
+      "recommendation": "Review the billing configuration and charging rules for the account to identify and correct any errors or omissions, and verify that all applicable charges are being properly applied."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 1520.3344821929932
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-DC-001",
+      "ground_truth_id": "DC-001",
+      "anomaly_type": "duplicate_charge",
+      "confidence": 0.82,
+      "monthly_charges": 319.8,
+      "total_charges": 5448.197592930262,
+      "tenure": 6,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "One year"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "duplicate_charge",
+      "root_cause": "The account ABL-DC-001 has been flagged for duplicate charges, likely due to an error in the billing system where the monthly charges are being incorrectly processed multiple times. The high total charges of $5448.20 over a short tenure of 6 months, despite a monthly charge of $319.8, suggests that the issue is related to the billing cycle. The contract and internet service features do not seem to be contributing factors in this case.",
+      "recommendation": "Review the billing system logs to identify and correct the duplicate charge error, and refund the excess amount to the customer. Verify the billing cycle and payment processing to prevent similar issues in the future."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 942.0032501220703
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-DC-002",
+      "ground_truth_id": "DC-002",
+      "anomaly_type": "duplicate_charge",
+      "confidence": 0.9,
+      "monthly_charges": 530.0,
+      "total_charges": 4675.678388654929,
+      "tenure": 6,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "Two year"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "duplicate_charge",
+      "root_cause": "The account ABL-DC-002 has been flagged for duplicate charges, likely due to an error in the billing system where the monthly charge of $530.0 has been incorrectly applied multiple times, resulting in a total charge of $4675.68 over 6 months. This could be caused by a misconfiguration in the billing rules or a failure to update the billing records after a change in the customer's plan. The customer's contract and internet service features do not seem to be the cause of the issue.",
+      "recommendation": "Review the billing history and system logs to identify the specific cause of the duplicate charges and correct the billing records to reflect the accurate charges. A refund or credit may be necessary to rectify the situation."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 1754.9316883087158
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-DC-003",
+      "ground_truth_id": "DC-003",
+      "anomaly_type": "duplicate_charge",
+      "confidence": 0.91,
+      "monthly_charges": 179.0,
+      "total_charges": 7729.266304167905,
+      "tenure": 60,
+      "features": {
+        "InternetService": "DSL",
+        "Contract": "Month-to-month"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "duplicate_charge",
+      "root_cause": "The account ABL-DC-003 has been flagged for duplicate charges, likely due to an error in the billing system where the monthly charge of $179.0 has been incorrectly applied multiple times, resulting in a total charge of $7729.27 over 60 months. This could be caused by a faulty billing script or incorrect configuration of the month-to-month contract. The lack of a fixed contract term may have contributed to the billing error.",
+      "recommendation": "Review the billing history and configuration for account ABL-DC-003 to identify and correct the duplicate charge error, and consider implementing additional checks to prevent similar errors in the future."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 806.0064315795898
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-US-001",
+      "ground_truth_id": "US-001",
+      "anomaly_type": "usage_spike",
+      "confidence": 0.93,
+      "monthly_charges": 1100.0,
+      "total_charges": 3084.035062537314,
+      "tenure": 23,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "Month-to-month"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "usage_spike",
+      "root_cause": "The account ABL-US-001 has been flagged for a usage spike, likely due to unauthorized or excessive use of the fiber optic internet service. The month-to-month contract suggests a lack of a fixed data cap, which may have contributed to the unusually high total charges. The confidence level of 0.93 indicates a high probability that the spike is not a normal fluctuation.",
+      "recommendation": "Investigate the account activity and consider implementing a data cap or monitoring system to prevent future excessive usage. Contact the customer to verify the legitimacy of the charges and offer assistance in managing their internet usage."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 889.1422748565674
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-US-002",
+      "ground_truth_id": "US-002",
+      "anomaly_type": "usage_spike",
+      "confidence": 0.97,
+      "monthly_charges": 1100.0,
+      "total_charges": 1766.5770738988654,
+      "tenure": 30,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "Month-to-month"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "usage_spike",
+      "root_cause": "The account ABL-US-002 has been flagged for a usage spike, likely due to unauthorized or excessive use of the fiber optic internet service. The month-to-month contract suggests a lack of a fixed data cap, which may have contributed to the increased usage. The significant difference between the monthly charges and total charges indicates a substantial surge in data consumption.",
+      "recommendation": "Investigate the account's usage patterns and consider implementing data caps or throttling to prevent further excessive usage. Additionally, review the account's security settings to ensure that the internet service is not being used for unauthorized activities."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 1285.0737571716309
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-US-003",
+      "ground_truth_id": "US-003",
+      "anomaly_type": "usage_spike",
+      "confidence": 0.82,
+      "monthly_charges": 1100.0,
+      "total_charges": 5527.945235251683,
+      "tenure": 51,
+      "features": {
+        "InternetService": "DSL",
+        "Contract": "One year"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "usage_spike",
+      "root_cause": "The account ABL-US-003 has been flagged for a usage spike, likely due to unauthorized or excessive data usage. The significant difference between the monthly charges and total charges suggests that the customer's Internet usage has increased substantially, possibly due to changes in usage patterns or malicious activities. The DSL Internet service and one-year contract may also be contributing factors, as they can lead to increased data consumption.",
+      "recommendation": "Investigate the customer's usage patterns and verify if there are any unauthorized devices or activities connected to the account. Consider offering data monitoring tools or upgrading the customer to a more suitable plan to prevent future usage spikes."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 1579.561710357666
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-CF-001",
+      "ground_truth_id": "CF-001",
+      "anomaly_type": "cdr_failure",
+      "confidence": 0.93,
+      "monthly_charges": 0.0,
+      "total_charges": 0.0,
+      "tenure": 8,
+      "features": {
+        "InternetService": "DSL",
+        "Contract": "Month-to-month"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "cdr_failure",
+      "root_cause": "The account ABL-CF-001 has been flagged as a cdr_failure, likely due to a issue with the collection of call detail records (CDRs) from the DSL internet service. This could be caused by a misconfiguration of the CDR collection system or a technical issue with the DSL service itself. The month-to-month contract and zero monthly and total charges suggest that the issue may be related to a lack of usage data being collected.",
+      "recommendation": "Investigate the CDR collection system and DSL service configuration to identify and resolve the technical issue, and verify that usage data is being correctly collected and billed."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 964.7214412689209
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-CF-002",
+      "ground_truth_id": "CF-002",
+      "anomaly_type": "cdr_failure",
+      "confidence": 0.82,
+      "monthly_charges": 0.0,
+      "total_charges": 0.0,
+      "tenure": 71,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "One year"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "cdr_failure",
+      "root_cause": "The CDR (Call Detail Record) failure for account ABL-CF-002 is likely due to a technical issue with the fiber optic internet service, possibly related to a recent network upgrade or maintenance. The fact that the account has a long tenure of 71 months and a one-year contract suggests that the issue is not related to a new installation or contract negotiation. The zero monthly and total charges indicate that the CDR failure has resulted in a loss of billing data, which is a critical issue that needs to be addressed promptly.",
+      "recommendation": "Investigate the fiber optic network and CDR generation process to identify and resolve the technical issue, and manually update the billing data for the affected account to ensure accurate charging."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 1359.1318130493164
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-CF-003",
+      "ground_truth_id": "CF-003",
+      "anomaly_type": "cdr_failure",
+      "confidence": 0.81,
+      "monthly_charges": 0.0,
+      "total_charges": 0.0,
+      "tenure": 51,
+      "features": {
+        "InternetService": "DSL",
+        "Contract": "Month-to-month"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "cdr_failure",
+      "root_cause": "The account ABL-CF-003 has been flagged as a cdr_failure, likely due to a technical issue with the billing system or a problem with the data collection process, resulting in zero monthly and total charges despite being an active account for 51 months. The month-to-month contract and DSL internet service may also be contributing factors to the anomaly. The confidence level of 0.81 suggests a high likelihood of a genuine issue.",
+      "recommendation": "Investigate the billing system and data collection process to identify and resolve any technical issues, and verify the account details to ensure accurate charging. Review the account's usage and billing history to determine the correct charges."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 1254.2431354522705
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-SB-001",
+      "ground_truth_id": "SB-001",
+      "anomaly_type": "sla_breach",
+      "confidence": 0.95,
+      "monthly_charges": 410.0,
+      "total_charges": 11854.517479368069,
+      "tenure": 40,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "Two year"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "sla_breach",
+      "root_cause": "The high total charges of $11,854.52 over 40 months, despite a monthly charge of $410, suggests that additional fees or charges are being incurred outside of the standard monthly rate. The fiber optic internet service and two-year contract may be contributing factors, potentially due to excessive data usage or additional service fees. The confidence level of 0.95 indicates a high likelihood that the SLA breach is related to these factors.",
+      "recommendation": "Review the account's usage patterns and additional service fees to identify the specific cause of the SLA breach and consider adjusting the service plan or contract terms to prevent future breaches."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 1028.8395881652832
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-SB-002",
+      "ground_truth_id": "SB-002",
+      "anomaly_type": "sla_breach",
+      "confidence": 0.9,
+      "monthly_charges": 180.0,
+      "total_charges": 3458.243836556622,
+      "tenure": 49,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "One year"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "sla_breach",
+      "root_cause": "The high total charges of $3458.24 compared to the monthly charges of $180.00 suggest that additional fees or charges were incurred, potentially due to excessive data usage or extra services. The customer's fiber optic internet service and one-year contract may have contributed to the increased usage and subsequent breach of the service level agreement. The long tenure of 49 months also indicates a potential lack of regular account reviews or updates to the customer's plan.",
+      "recommendation": "Review the customer's account and usage patterns to identify the specific cause of the excessive charges and consider adjusting their plan or providing additional services to prevent future breaches. Offer the customer a revised contract or plan that better suits their needs and usage patterns."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 1070.6007480621338
+  },
+  {
+    "anomaly_data": {
+      "account_id": "ABL-SB-003",
+      "ground_truth_id": "SB-003",
+      "anomaly_type": "sla_breach",
+      "confidence": 0.94,
+      "monthly_charges": 180.0,
+      "total_charges": 11553.177210151469,
+      "tenure": 32,
+      "features": {
+        "InternetService": "Fiber optic",
+        "Contract": "Two year"
+      }
+    },
+    "rca_report": {
+      "anomaly_type": "sla_breach",
+      "root_cause": "The high total charges of $11,553.18 over 32 months, despite a monthly charge of $180.00, suggests that additional fees or charges are being incurred outside of the standard monthly rate. This could be due to excessive data usage, equipment rental fees, or other services not included in the standard contract. The fiber optic internet service and two-year contract may also be contributing factors to the high total charges.",
+      "recommendation": "Review the account's usage and billing history to identify any additional fees or charges that may be causing the SLA breach, and consider adjusting the account's plan or features to bring the charges back in line with the expected monthly rate."
+    },
+    "retrieval_count": 0,
+    "pipeline_status": "completed",
+    "latency_ms": 959.4857692718506
+  }
+]
