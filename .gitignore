@@ -44,9 +44,10 @@ data/processed/*
 # Build artifacts
 chroma_db/
 mlruns/
-models/*.joblib
 inferences.db
 *.log
+# NOTE: models/isolation_forest_model.joblib IS tracked (2.4 MB, seeded, reproducible)
+# — the Dockerfile COPYs models/ and the UI/CLI load it for instant detection.
 
 # Streamlit secrets
 .streamlit/secrets.toml
