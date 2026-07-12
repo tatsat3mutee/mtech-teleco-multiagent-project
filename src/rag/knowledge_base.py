@@ -3,6 +3,7 @@ ChromaDB Knowledge Base management.
 Handles document indexing, storage, and retrieval.
 """
 import chromadb
+from chromadb.config import Settings as _ChromaSettings
 import logging
 from pathlib import Path
 from typing import List, Optional
@@ -21,7 +22,13 @@ class KnowledgeBase:
 
     def __init__(self, persist_dir: Path = CHROMA_PERSIST_DIR,
                  collection_name: str = CHROMA_COLLECTION_NAME):
-        self.client = chromadb.PersistentClient(path=str(persist_dir))
+        self.client = chromadb.PersistentClient(
+            path=str(persist_dir),
+            # Chroma's anonymous telemetry crashes against newer posthog versions
+            # ("capture() takes 1 positional argument but 3 were given") and spams
+            # logs — disable it; it sends nothing we need anyway.
+            settings=_ChromaSettings(anonymized_telemetry=False),
+        )
         self.collection = self.client.get_or_create_collection(
             name=collection_name,
             metadata={"hnsw:space": "cosine"},

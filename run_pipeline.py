@@ -5,6 +5,7 @@ Usage:
     python run_pipeline.py --dataset sebd   # enterprise billing (SEBD)
 """
 import sys
+import os
 import json
 import time
 import argparse
@@ -145,6 +146,14 @@ def step_5_run_agent_pipeline(detector, df: pd.DataFrame, limit: int = 10, datas
         print(f"{status} ({result.get('latency_ms', 0):.0f}ms)")
 
         results.append(result)
+
+        # Free-tier pacing: each anomaly consumes ~3-5K tokens across 4-6 LLM calls,
+        # while Groq allows 8K TPM and OpenRouter free models share upstream capacity.
+        # A short pause lets the per-minute token window recover, so the router paces
+        # instead of cascading 429s. Override with RCA_BATCH_DELAY_S=0 on paid tiers.
+        _delay = float(os.environ.get("RCA_BATCH_DELAY_S", "20"))
+        if _delay > 0 and idx != anomalies.index[-1]:
+            time.sleep(_delay)
 
     # Log batch to MLflow
     try:
