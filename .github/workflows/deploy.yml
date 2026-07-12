@@ -32,6 +32,8 @@ jobs:
           script: |
             cd /opt/rca-platform
             sudo git pull origin main
+            sudo docker compose build
+            sudo docker builder prune -f --keep-storage 4GB
             sudo systemctl restart rca-platform
             sleep 30
             curl -sf http://localhost:8501/_stcore/health && echo "Streamlit healthy"

@@ -91,7 +91,10 @@ After=docker.service network-online.target
 [Service]
 User=$DEPLOY_USER
 WorkingDirectory=$REPO_DIR
-ExecStart=/usr/bin/docker compose up --build
+# No --build here: rebuilding on every service start churns gigabytes of
+# BuildKit cache (observed filling a 30 GB disk). Builds are explicit:
+# 'docker compose build' manually or via the CD workflow before restart.
+ExecStart=/usr/bin/docker compose up
 ExecStop=/usr/bin/docker compose down
 Restart=on-failure
 RestartSec=30
