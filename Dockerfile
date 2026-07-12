@@ -35,13 +35,13 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 
 # Pre-build ChromaDB knowledge base from corpus (eliminates cold-start rebuild)
 # Runs at image build time so the first request is served immediately.
-# Fails the build loudly if the corpus is missing — a silent skip would ship
-# an image that rebuilds embeddings on every cold start.
+# Fails the build loudly if the corpus is missing or zero chunks were indexed —
+# a silent skip would ship an image that rebuilds embeddings on every cold start.
 RUN python -c "\
-from src.rag.knowledge_base import KnowledgeBase; \
-kb = KnowledgeBase(); \
-kb.build_from_corpus(); \
-print('ChromaDB knowledge base built successfully') \
+from src.rag.knowledge_base import build_knowledge_base; \
+kb = build_knowledge_base(); \
+assert kb.count > 0, 'KB build produced 0 chunks'; \
+print(f'ChromaDB knowledge base built: {kb.count} chunks') \
 "
 
 # Expose Streamlit port
