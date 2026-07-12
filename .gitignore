@@ -59,3 +59,9 @@ inferences.db
 
 # OS
 Thumbs.db
+
+# Local-only ops runbook (personal domains/infra details — not for the public repo)
+docs/AWS_ONE_PLAN.md
+
+# Agent tooling workspace residue
+.sdlc/

@@ -55,7 +55,9 @@ if [ ! -f "$REPO_DIR/.env" ]; then
     echo ""
     echo "IMPORTANT: Edit $REPO_DIR/.env and add your API keys before starting."
     echo "  Required: GROQ_API_KEY (free at console.groq.com)"
-    echo "  Optional: GEMINI_API_KEY, DEEPSEEK_API_KEY, KIMI_API_KEY"
+    echo "  Recommended: OPENROUTER_API_KEY (fallback pool), RCA_API_KEY (API auth),"
+    echo "               CORS_ORIGINS (your public URL)"
+    echo "  Optional: LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY (observability)"
 fi
 
 # ── 6. Firewall ─────────────────────────────────────────────────────

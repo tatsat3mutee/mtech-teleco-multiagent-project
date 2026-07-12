@@ -39,9 +39,13 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: rca_api
-    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2
+    # --proxy-headers: honor X-Forwarded-For/Proto from the TLS-terminating proxy
+    # (Caddy/nginx) so slowapi rate-limits real client IPs, not the proxy's.
+    # Safe because the port is bound to 127.0.0.1 below — only the local proxy
+    # can reach it, so forwarded headers cannot be spoofed externally.
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips=*
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - chroma_data:/app/chroma_db
       - mlflow_data:/app/mlruns

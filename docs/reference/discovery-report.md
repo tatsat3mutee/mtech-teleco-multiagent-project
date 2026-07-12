@@ -44,7 +44,7 @@ A reproducible, production-style multi-agent investigation system that:
 | Evaluation metrics | ROUGE-L, BERTScore, RAGAS faithfulness, LLM-as-Judge (4 axes), detection F1/ROC-AUC |
 | Statistical tests | Bootstrap 95% CI, paired-bootstrap p-values, Wilcoxon signed-rank |
 | Ablation configurations | 5 (A: No-RAG, B: RAG-only, C: Single-agent, D: 4-agent, E: GraphRAG + 4-agent) |
-| Deployment | Docker Compose, Heroku Procfile, optional VPS with nginx |
+| Deployment | Docker Compose, AWS EC2 (deploy/aws-user-data.sh), optional nginx front door |
 
 ## 5. Defensible contributions (use these in Abstract + Ch 1 §1.5)
 

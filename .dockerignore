@@ -1,0 +1,22 @@
+# Keep the Docker build context small — only what the Dockerfile COPYs matters.
+.git
+.venv
+venv
+__pycache__
+**/__pycache__
+*.pyc
+.env
+.sdlc
+chroma_db/
+data/chroma_db/
+data/raw/
+mlruns/
+traces/
+local_research_papers/
+docs/
+tests/
+results/plots/
+*.md
+!data/corpus/**/*.md
+inferences.db
+test_run_output.txt

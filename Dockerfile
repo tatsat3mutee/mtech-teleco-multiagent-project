@@ -23,6 +23,12 @@ COPY models/ models/
 COPY data/corpus/ data/corpus/
 COPY data/eval/ data/eval/
 COPY data/demo/ data/demo/
+# Demo artifacts: preloaded anomalies for RCA Viewer + real ablation results
+# for the Experiment Results page (both tiny, ~1.3 MB total)
+COPY data/processed/anomalies_labeled.csv data/processed/anomalies_labeled.csv
+COPY results/ablation/ results/ablation/
+# Pre-built GraphRAG causal graph (graph-first retrieval for zero_billing/cdr_failure)
+COPY data/graph_rag/ data/graph_rag/
 
 # Pre-download embedding model at build time (avoids cold-start delay)
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
@@ -45,8 +51,8 @@ EXPOSE 8501
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD curl -f http://localhost:8501/_stcore/health || exit 1
 
-# Run Streamlit (CMD, not ENTRYPOINT, so platform start commands — e.g. Railway
-# `startCommand` with $PORT, or docker-compose `command: uvicorn api.main:app` —
+# Run Streamlit (CMD, not ENTRYPOINT, so platform start commands — e.g.
+# docker-compose `command: uvicorn api.main:app` for the API service —
 # can override it without needing --entrypoint gymnastics)
 CMD ["streamlit", "run", "app.py", \
     "--server.port=8501", \

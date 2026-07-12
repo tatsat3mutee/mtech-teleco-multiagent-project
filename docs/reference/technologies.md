@@ -9,7 +9,7 @@
 |---|---|---|
 | Python | 3.12 | Native asyncio, PEP 695 generic syntax, sentence-transformers + LangGraph compatibility |
 | OS (dev) | Windows 11 | Author's primary dev environment |
-| OS (deploy) | Linux (Docker / Heroku / VPS) | Reproducibility and CI |
+| OS (deploy) | Linux (Docker / AWS EC2) | Reproducibility and CI |
 
 ## Core ML / NLP libraries
 

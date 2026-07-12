@@ -4,6 +4,21 @@ This guide deploys the full RCA platform to a single AWS EC2 instance using the
 existing `docker-compose.yml` and `deploy/setup_vps.sh` bootstrap script. No
 AWS-specific code changes are required — Docker Compose runs identically on EC2.
 
+## ⚡ Tonight checklist (total hands-on ≈ 20 min)
+
+1. ☐ Create AWS account → verify email/card → sign in to console
+2. ☐ **§8 first**: create $5/month budget alert (2 min — do not skip)
+3. ☐ EC2 → Launch instance per §2, pasting `deploy/aws-user-data.sh` into
+   **Advanced details → User data** (auto-installs everything at boot)
+4. ☐ Wait ~5–8 min, SSH in, add keys: `sudo nano /opt/rca-platform/.env`
+   (GROQ_API_KEY, OPENROUTER_API_KEY, RCA_API_KEY, CORS_ORIGINS)
+5. ☐ `sudo systemctl start rca-platform` → wait for build → open
+   `http://<EC2_PUBLIC_IP>:8501`
+6. ☐ `aws ec2 stop-instances` (or console Stop) when done — pay ~$2/mo idle
+
+> **Co-hosting DevPulse (ai-pulse) on the same box?** Use **30 GB** storage in
+> step 3 and follow §9 (Caddy owns 80/443 — skip the nginx overlay).
+
 ---
 
 ## 1. Sizing & cost
@@ -47,7 +62,11 @@ couple of dollars a month for storage. Start it ~10 minutes before a viva/demo.
 6. **Storage:** 20 GB gp3 (default 8 GB is too small once the image + ChromaDB are
    built).
 7. **Security group:** see §3 below.
-8. Launch.
+8. **Advanced details → User data:** paste the contents of
+   [`deploy/aws-user-data.sh`](../deploy/aws-user-data.sh). This runs the full
+   bootstrap automatically at first boot (Docker, repo clone, 2 GB swap, firewall,
+   systemd service, image pre-build) — progress log at `/var/log/rca-bootstrap.log`.
+9. Launch.
 
 ---
 
@@ -70,6 +89,10 @@ rules:
 
 ## 4. Bootstrap the platform
 
+> If you pasted `deploy/aws-user-data.sh` as User data in §2, bootstrap already ran
+> at boot — skip straight to “Add your API keys” below. Check
+> `sudo tail -50 /var/log/rca-bootstrap.log` if anything looks off.
+
 SSH in (replace with your key path and the instance's public IP):
 
 ```bash
@@ -87,6 +110,15 @@ Add your API keys (at least Groq — free at console.groq.com):
 
 ```bash
 sudo nano /opt/rca-platform/.env
+```
+
+Set at minimum:
+
+```ini
+GROQ_API_KEY=gsk_...                  # required
+OPENROUTER_API_KEY=sk-or-...          # fallback pool (recommended)
+RCA_API_KEY=<long-random-string>      # protects the public FastAPI endpoint
+CORS_ORIGINS=http://<EC2_PUBLIC_IP>:8501,http://<EC2_PUBLIC_IP>
 ```
 
 Start the stack:
@@ -109,26 +141,16 @@ The app is then reachable at:
 `docker-compose.yml` does **not** include an nginx service, so port 80 is not served
 by default. For a demo, hitting Streamlit directly on `:8501` is fine.
 
-If you want a clean `http://<ip>/` URL (and later HTTPS with a domain), add an nginx
-service to compose that mounts `deploy/nginx.conf`:
+For a clean `http://<ip>/` URL, use the provided overlay file — no editing needed:
 
-```yaml
-  nginx:
-    image: nginx:1.27-alpine
-    ports:
-      - "80:80"
-    volumes:
-      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - streamlit
-      - mlflow
-    restart: unless-stopped
-    networks:
-      - rca_net
+```bash
+cd /opt/rca-platform
+docker compose -f docker-compose.yml -f docker-compose.nginx.yml up -d --build
 ```
 
-The provided `nginx.conf` already proxies `/` → Streamlit and `/mlflow/` → MLflow on
-the `rca_net` Docker network.
+(To make the systemd service use it permanently, edit `ExecStart`/`ExecStop` in
+`/etc/systemd/system/rca-platform.service` to include both `-f` flags, then
+`sudo systemctl daemon-reload && sudo systemctl restart rca-platform`.)
 
 ---
 
@@ -171,3 +193,62 @@ charges.
    **billed when the instance is stopped**. For demos, skip the Elastic IP (the public
    IP changes on restart, which is fine) or release it when stopping.
 3. Stop the instance whenever you are not actively demoing.
+
+---
+
+## 9. Co-hosting DevPulse (ai-pulse) on the same instance
+
+One `t3.medium` comfortably runs both projects: the RCA stack uses ~1.5–1.8 GB,
+DevPulse (single Bun container, Neon-hosted DB) ~0.4 GB, Caddy + OS ~0.4 GB —
+≈2.5 GB of 4 GB, plus the 2 GB swap from `aws-user-data.sh`.
+
+**Changes vs. single-project setup:**
+
+| Setting | Single project | Co-hosted |
+|---|---|---|
+| Storage | 20 GB gp3 | **30 GB gp3** (two Docker images + build cache) |
+| Port 80/443 | optional nginx overlay | **Caddy owns 80/443** — do NOT use `docker-compose.nginx.yml` |
+| Security group | §3 | §3 **plus** 443 from anywhere; port 3000 stays closed (Caddy proxies internally) |
+| Elastic IP | skip | **keep one** (stable DNS for both subdomains; ~$3.6/mo while stopped — acceptable) |
+
+**Deploy DevPulse** after §4, following `ai-pulse/DEPLOY_AWS.md` §§2–4 (clone,
+`backend/.env`, `docker run -p 3000:3000`). Then install Caddy (its §5) with a
+combined Caddyfile routing both apps:
+
+```
+# /etc/caddy/Caddyfile — one front door, two apps, auto-HTTPS for both
+devpulse.tatsatpandey.com {
+    reverse_proxy localhost:3000
+}
+
+rca.tatsatpandey.com {
+    reverse_proxy localhost:8501     # Caddy handles Streamlit WebSockets natively
+}
+
+rca-api.tatsatpandey.com {
+    reverse_proxy localhost:8000     # optional: expose FastAPI (RCA_API_KEY required)
+}
+```
+
+```bash
+sudo systemctl restart caddy
+```
+
+**DNS:** A records for `devpulse`, `rca` (and optionally `rca-api`) → the Elastic IP.
+
+**RCA `.env` addition** — allow the new origin:
+
+```ini
+CORS_ORIGINS=https://rca.tatsatpandey.com,https://devpulse.tatsatpandey.com
+```
+
+**LLM quota isolation (important):** DevPulse's summarizer is Groq-first
+(token bucket rpm=25 in `backend/src/llm/client.ts`) and RCA's router caps at
+rpm=28 — together they over-budget a single shared Groq account's 30 rpm cap
+during overlapping bursts. Use **two separate free Groq accounts** (one key per
+app). Keep one OpenRouter account with a $10 lifetime credit balance (unlocks
+1000 free-model requests/day) shared by both apps + the RCA LLM-judge.
+
+Both apps stop/start together with the instance — one Stop click pauses all compute
+billing for the pair.
+

@@ -175,6 +175,12 @@ docker compose up --build -d
 - **Redis** at `http://localhost:6379` — LLM response cache + rate limiting
 - **MLflow** at `http://localhost:5000` — experiment tracking
 
+Cloud deployment: single AWS EC2 instance — full runbook in
+[docs/AWS_DEPLOY.md](docs/AWS_DEPLOY.md) (bootstrap via `deploy/aws-user-data.sh`,
+optional nginx front door via `docker-compose.nginx.yml`). CD: pushes to `main`
+auto-deploy over SSH via `.github/workflows/deploy.yml` once `DEPLOY_TARGET=ec2`
+is configured.
+
 ### External Services (free tier, optional)
 
 | Service | Purpose | Config |

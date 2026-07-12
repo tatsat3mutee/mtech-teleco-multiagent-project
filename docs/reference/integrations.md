@@ -83,7 +83,7 @@ All datasets stored under `data/raw/` (gitignored). Download script: `scripts/do
                                  │ git push
                                  ▼
               ┌───────────────────────────────────┐
-              │   Docker host  (VPS / Heroku)     │
+              │   Docker host  (AWS EC2 / VPS)    │
               │                                   │
               │  ┌────────────┐   ┌────────────┐  │
               │  │ Streamlit  │   │ FastAPI    │  │
