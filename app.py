@@ -29,10 +29,9 @@ def ensure_knowledge_base() -> None:
     if chroma_dir.exists() and any(chroma_dir.iterdir()):
         return
     try:
-        from src.rag.knowledge_base import KnowledgeBase
-        kb = KnowledgeBase()
-        kb.build_from_corpus()
-        st.toast("Knowledge base built successfully.", icon="✅")
+        from src.rag.knowledge_base import build_knowledge_base
+        kb = build_knowledge_base()
+        st.toast(f"Knowledge base ready ({kb.count} chunks).", icon="✅")
     except Exception as exc:
         st.warning(f"Knowledge base cold-start failed: {exc}")
 
@@ -47,6 +46,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+from src.utils.ui import inject_responsive_css
+inject_responsive_css()
 
 # ────────────────────────────────────────────────────────────────────
 # Backstage-inspired CSS

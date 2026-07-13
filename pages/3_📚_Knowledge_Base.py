@@ -10,6 +10,9 @@ from config import RCA_PLAYBOOKS_DIR, CORPUS_DIR
 
 st.set_page_config(page_title="Knowledge Base", page_icon="📚", layout="wide")
 
+from src.utils.ui import inject_responsive_css
+inject_responsive_css()
+
 # ── Custom CSS ──
 st.markdown("""
 <style>

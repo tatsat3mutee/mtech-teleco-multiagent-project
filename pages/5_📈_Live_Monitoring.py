@@ -12,6 +12,9 @@ from src.utils.inference_log import fetch_recent, stats
 
 st.set_page_config(page_title="Live Monitoring", page_icon="📈", layout="wide")
 
+from src.utils.ui import inject_responsive_css
+inject_responsive_css()
+
 st.markdown("""
 <style>
     [data-testid="stSidebarNav"] { display: none !important; }

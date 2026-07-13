@@ -16,6 +16,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 st.set_page_config(page_title="Experiment Results", page_icon="📊", layout="wide")
 
+from src.utils.ui import inject_responsive_css
+inject_responsive_css()
+
 st.markdown("""
 <style>
     [data-testid="stSidebarNav"] { display: none !important; }

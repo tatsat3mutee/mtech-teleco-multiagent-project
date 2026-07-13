@@ -13,6 +13,9 @@ from config import PROCESSED_DATA_DIR
 
 st.set_page_config(page_title="RCA Viewer", page_icon="🔍", layout="wide")
 
+from src.utils.ui import inject_responsive_css
+inject_responsive_css()
+
 # ── Custom CSS ──
 st.markdown("""
 <style>
